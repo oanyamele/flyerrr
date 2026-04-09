@@ -32,13 +32,14 @@ export interface CampusEvent {
   tags: string[];
 }
 
-export const CATEGORIES: { id: EventCategory | "all"; label: string; emoji: string }[] = [
-  { id: "all", label: "For You", emoji: "✨" },
-  { id: "social", label: "Social", emoji: "🎉" },
-  { id: "academic", label: "Academic", emoji: "📚" },
-  { id: "career", label: "Career", emoji: "💼" },
-  { id: "sports", label: "Sports", emoji: "⚽" },
-  { id: "arts", label: "Arts", emoji: "🎨" },
+export const CATEGORIES: { id: EventCategory | "all" | "following"; label: string }[] = [
+  { id: "all", label: "For You" },
+  { id: "following", label: "Following" },
+  { id: "social", label: "Social" },
+  { id: "academic", label: "Academic" },
+  { id: "career", label: "Career" },
+  { id: "sports", label: "Sports" },
+  { id: "arts", label: "Arts" },
 ];
 
 export const mockOrgs: OrgProfile[] = [

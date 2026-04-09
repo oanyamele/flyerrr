@@ -1,8 +1,8 @@
 import { CATEGORIES, type EventCategory } from "@/data/mockEvents";
 
 interface CategoryFilterProps {
-  active: EventCategory | "all";
-  onChange: (cat: EventCategory | "all") => void;
+  active: EventCategory | "all" | "following";
+  onChange: (cat: EventCategory | "all" | "following") => void;
 }
 
 const CategoryFilter = ({ active, onChange }: CategoryFilterProps) => {
@@ -18,7 +18,6 @@ const CategoryFilter = ({ active, onChange }: CategoryFilterProps) => {
               : "bg-secondary text-secondary-foreground hover:bg-secondary/80"
           }`}
         >
-          <span>{cat.emoji}</span>
           <span>{cat.label}</span>
         </button>
       ))}

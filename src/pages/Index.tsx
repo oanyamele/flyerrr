@@ -1,15 +1,23 @@
 import { useState } from "react";
-import { Bell } from "lucide-react";
+import { Bell, Plus } from "lucide-react";
 import CategoryFilter from "@/components/CategoryFilter";
 import EventCard from "@/components/EventCard";
 import WeeklyDigest from "@/components/WeeklyDigest";
 import BottomNav from "@/components/BottomNav";
 import { mockEvents, type EventCategory } from "@/data/mockEvents";
+import { useAuth } from "@/contexts/AuthContext";
+import { useFollow } from "@/contexts/FollowContext";
+import { useNavigate } from "react-router-dom";
 
 const Index = () => {
-  const [activeCategory, setActiveCategory] = useState<EventCategory | "all">("all");
+  const [activeCategory, setActiveCategory] = useState<EventCategory | "all" | "following">("all");
+  const { auth } = useAuth();
+  const { followedOrgIds } = useFollow();
+  const navigate = useNavigate();
 
-  const filtered = activeCategory === "all"
+  const filtered = activeCategory === "following"
+    ? mockEvents.filter((e) => followedOrgIds.includes(e.org.id))
+    : activeCategory === "all"
     ? mockEvents
     : mockEvents.filter((e) => e.category === activeCategory);
 
@@ -18,14 +26,22 @@ const Index = () => {
       {/* Header */}
       <header className="sticky top-0 z-40 bg-background/80 backdrop-blur-xl">
         <div className="flex items-center justify-between px-5 pt-[max(1rem,env(safe-area-inset-top))] pb-2">
-          <div>
-            <h1 className="text-2xl font-extrabold text-foreground tracking-tight">flyerrr</h1>
-            <p className="text-xs text-muted-foreground">Discover what's happening on campus</p>
+          <div className="flex-1" />
+          <h1 className="text-3xl font-extrabold text-primary tracking-tight">flyerrr</h1>
+          <div className="flex-1 flex justify-end gap-2">
+            {auth.role === "org_officer" && (
+              <button
+                onClick={() => navigate("/create-event")}
+                className="w-10 h-10 rounded-full bg-primary flex items-center justify-center"
+              >
+                <Plus className="w-5 h-5 text-primary-foreground" />
+              </button>
+            )}
+            <button className="relative w-10 h-10 rounded-full bg-secondary flex items-center justify-center">
+              <Bell className="w-5 h-5 text-foreground" />
+              <span className="absolute top-1 right-1 w-2.5 h-2.5 bg-accent rounded-full border-2 border-background" />
+            </button>
           </div>
-          <button className="relative w-10 h-10 rounded-full bg-secondary flex items-center justify-center">
-            <Bell className="w-5 h-5 text-foreground" />
-            <span className="absolute top-1 right-1 w-2.5 h-2.5 bg-primary rounded-full border-2 border-background" />
-          </button>
         </div>
         <CategoryFilter active={activeCategory} onChange={setActiveCategory} />
       </header>
@@ -43,7 +59,9 @@ const Index = () => {
       {filtered.length === 0 && (
         <div className="flex flex-col items-center justify-center py-20 text-muted-foreground">
           <p className="text-lg font-semibold">No events found</p>
-          <p className="text-sm">Try a different category</p>
+          <p className="text-sm">
+            {activeCategory === "following" ? "Follow organizations to see their events here" : "Try a different category"}
+          </p>
         </div>
       )}
 
