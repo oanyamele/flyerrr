@@ -1,6 +1,10 @@
-import { Settings, ChevronRight, Trophy, Calendar, Star, TrendingUp } from "lucide-react";
+import { Settings, ChevronRight, Trophy, Calendar, Star, TrendingUp, Moon, Sun, LogOut } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Switch } from "@/components/ui/switch";
 import BottomNav from "@/components/BottomNav";
+import { useAuth } from "@/contexts/AuthContext";
+import { useTheme } from "@/contexts/ThemeContext";
+import { useNavigate } from "react-router-dom";
 
 const stats = [
   { icon: Calendar, label: "Events Attended", value: "23", color: "text-primary" },
@@ -10,15 +14,19 @@ const stats = [
 ];
 
 const menuItems = [
-  "My Attendance History",
-  "Rewards & Perks",
-  "Resume Builder",
-  "Notification Settings",
-  "Privacy & Security",
-  "Help & Support",
+  { label: "My Attendance History", path: "/attendance-history" },
+  { label: "Rewards & Perks", path: "/rewards" },
+  { label: "Resume Builder", path: "/resume-builder" },
+  { label: "Notification Settings", path: "/notification-settings" },
+  { label: "Privacy & Security", path: "" },
+  { label: "Help & Support", path: "" },
 ];
 
 const Profile = () => {
+  const { auth, logout } = useAuth();
+  const { theme, toggleTheme } = useTheme();
+  const navigate = useNavigate();
+
   return (
     <div className="min-h-screen bg-background pb-24">
       <header className="px-5 pt-[max(1.5rem,env(safe-area-inset-top))] pb-4 flex items-center justify-between">
@@ -32,17 +40,31 @@ const Profile = () => {
       <div className="mx-5 p-5 rounded-3xl bg-card border border-border shadow-sm mb-5">
         <div className="flex items-center gap-4 mb-4">
           <div className="w-16 h-16 rounded-2xl bg-primary flex items-center justify-center text-2xl font-bold text-primary-foreground">
-            JD
+            {auth.userName ? auth.userName.split(" ").map(n => n[0]).join("").toUpperCase() : "JD"}
           </div>
           <div>
-            <h2 className="text-lg font-bold text-foreground">Jordan Davis</h2>
-            <p className="text-sm text-muted-foreground">Computer Science · Class of '27</p>
+            <h2 className="text-lg font-bold text-foreground">{auth.userName || "Jordan Davis"}</h2>
+            <p className="text-sm text-muted-foreground">
+              {auth.role === "org_officer" ? "Organization Officer" : "Computer Science - Class of '27"}
+            </p>
             <p className="text-xs text-muted-foreground">Howard University</p>
           </div>
         </div>
         <Button variant="outline" className="w-full rounded-xl text-sm font-semibold">
           Edit Profile
         </Button>
+      </div>
+
+      {/* Dark Mode Toggle */}
+      <div className="mx-5 mb-5 p-4 rounded-2xl bg-card border border-border flex items-center justify-between">
+        <div className="flex items-center gap-3">
+          {theme === "dark" ? <Moon className="w-5 h-5 text-accent" /> : <Sun className="w-5 h-5 text-warning" />}
+          <div>
+            <p className="text-sm font-semibold text-foreground">Dark Mode</p>
+            <p className="text-xs text-muted-foreground">{theme === "dark" ? "On" : "Off"}</p>
+          </div>
+        </div>
+        <Switch checked={theme === "dark"} onCheckedChange={toggleTheme} />
       </div>
 
       {/* Stats Grid */}
@@ -57,18 +79,31 @@ const Profile = () => {
       </div>
 
       {/* Menu */}
-      <div className="mx-5 rounded-2xl bg-card border border-border overflow-hidden">
+      <div className="mx-5 rounded-2xl bg-card border border-border overflow-hidden mb-5">
         {menuItems.map((item, i) => (
           <button
-            key={item}
+            key={item.label}
+            onClick={() => item.path && navigate(item.path)}
             className={`w-full flex items-center justify-between px-4 py-3.5 text-left tap-highlight-none ${
               i < menuItems.length - 1 ? "border-b border-border" : ""
             }`}
           >
-            <span className="text-sm font-medium text-foreground">{item}</span>
+            <span className="text-sm font-medium text-foreground">{item.label}</span>
             <ChevronRight className="w-4 h-4 text-muted-foreground" />
           </button>
         ))}
+      </div>
+
+      {/* Logout */}
+      <div className="mx-5">
+        <Button
+          variant="outline"
+          className="w-full rounded-xl text-sm font-semibold text-destructive border-destructive/30"
+          onClick={() => { logout(); navigate("/login"); }}
+        >
+          <LogOut className="w-4 h-4 mr-2" />
+          Sign Out
+        </Button>
       </div>
 
       <BottomNav />

@@ -1,10 +1,11 @@
 import { useParams, useNavigate } from "react-router-dom";
-import { ArrowLeft, Heart, Bookmark, Share2, MapPin, Clock, Users, CheckCircle2 } from "lucide-react";
+import { ArrowLeft, Bookmark, Share2, MapPin, Clock, Users, CheckCircle2 } from "lucide-react";
 import { motion } from "framer-motion";
 import { useState } from "react";
 import { mockEvents } from "@/data/mockEvents";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { useFollow } from "@/contexts/FollowContext";
 import BottomNav from "@/components/BottomNav";
 
 const EventDetail = () => {
@@ -12,6 +13,7 @@ const EventDetail = () => {
   const navigate = useNavigate();
   const event = mockEvents.find((e) => e.id === id);
   const [rsvp, setRsvp] = useState(false);
+  const { isFollowing, toggleFollow } = useFollow();
 
   if (!event) {
     return (
@@ -68,8 +70,13 @@ const EventDetail = () => {
               </div>
               <span className="text-xs text-muted-foreground">{event.org.followerCount.toLocaleString()} followers</span>
             </div>
-            <Button variant="outline" size="sm" className="rounded-full text-xs font-semibold">
-              Follow
+            <Button
+              variant={isFollowing(event.org.id) ? "secondary" : "outline"}
+              size="sm"
+              className="rounded-full text-xs font-semibold"
+              onClick={() => toggleFollow(event.org.id)}
+            >
+              {isFollowing(event.org.id) ? "Following" : "Follow"}
             </Button>
           </div>
 
@@ -147,7 +154,7 @@ const EventDetail = () => {
             {rsvp ? (
               <span className="flex items-center gap-2"><CheckCircle2 className="w-5 h-5" /> You're going!</span>
             ) : (
-              "RSVP — I'm in! 🎉"
+              "RSVP - I'm in!"
             )}
           </Button>
         </div>
