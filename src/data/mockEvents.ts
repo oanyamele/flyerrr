@@ -29,6 +29,7 @@ export interface CampusEvent {
   capacity: number;
   friendsGoing: string[];
   saved: boolean;
+  likes: number;
   tags: string[];
 }
 
@@ -65,6 +66,7 @@ export const mockEvents: CampusEvent[] = [
     capacity: 500,
     friendsGoing: ["Maya", "Jordan", "Alex"],
     saved: false,
+    likes: 1842,
     tags: ["free food", "live music", "outdoor"],
   },
   {
@@ -81,6 +83,7 @@ export const mockEvents: CampusEvent[] = [
     capacity: 120,
     friendsGoing: ["Chris"],
     saved: true,
+    likes: 612,
     tags: ["coding", "prizes", "networking"],
   },
   {
@@ -97,6 +100,7 @@ export const mockEvents: CampusEvent[] = [
     capacity: 400,
     friendsGoing: ["Maya", "Taylor"],
     saved: false,
+    likes: 947,
     tags: ["internships", "networking", "professional"],
   },
   {
@@ -113,6 +117,7 @@ export const mockEvents: CampusEvent[] = [
     capacity: 40,
     friendsGoing: ["Jordan", "Sam", "Alex"],
     saved: false,
+    likes: 138,
     tags: ["drop-in", "active", "weekly"],
   },
   {
@@ -129,6 +134,7 @@ export const mockEvents: CampusEvent[] = [
     capacity: 60,
     friendsGoing: ["Maya"],
     saved: false,
+    likes: 321,
     tags: ["games", "chill", "free"],
   },
 ];
