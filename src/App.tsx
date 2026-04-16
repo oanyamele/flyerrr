@@ -18,6 +18,8 @@ import AttendanceHistory from "./pages/AttendanceHistory";
 import RewardsPerks from "./pages/RewardsPerks";
 import ResumeBuilder from "./pages/ResumeBuilder";
 import NotificationSettings from "./pages/NotificationSettings";
+import OrganizationVerificationQueue from "./pages/OrganizationVerificationQueue";
+import AttendanceReports from "./pages/AttendanceReports";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -39,6 +41,8 @@ const ProtectedRoutes = () => {
       <Route path="/rewards" element={<RewardsPerks />} />
       <Route path="/resume-builder" element={<ResumeBuilder />} />
       <Route path="/notification-settings" element={<NotificationSettings />} />
+      <Route path="/org-verification-queue" element={<OrganizationVerificationQueue />} />
+      <Route path="/attendance-reports" element={<AttendanceReports />} />
       <Route path="*" element={<NotFound />} />
     </Routes>
   );

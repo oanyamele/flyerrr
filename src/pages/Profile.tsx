@@ -13,19 +13,24 @@ const stats = [
   { icon: TrendingUp, label: "Streak", value: "5 weeks", color: "text-success" },
 ];
 
-const menuItems = [
-  { label: "My Attendance History", path: "/attendance-history" },
-  { label: "Rewards & Perks", path: "/rewards" },
-  { label: "Resume Builder", path: "/resume-builder" },
-  { label: "Notification Settings", path: "/notification-settings" },
-  { label: "Privacy & Security", path: "" },
-  { label: "Help & Support", path: "" },
-];
-
 const Profile = () => {
   const { auth, logout } = useAuth();
   const { theme, toggleTheme } = useTheme();
   const navigate = useNavigate();
+  const menuItems = [
+    { label: "My Attendance History", path: "/attendance-history" },
+    { label: "Rewards & Perks", path: "/rewards" },
+    { label: "Resume Builder", path: "/resume-builder" },
+    { label: "Notification Settings", path: "/notification-settings" },
+    ...(auth.role === "org_officer"
+      ? [
+          { label: "Organization Verification Queue", path: "/org-verification-queue" },
+          { label: "Attendance Reporting", path: "/attendance-reports" },
+        ]
+      : []),
+    { label: "Privacy & Security", path: "" },
+    { label: "Help & Support", path: "" },
+  ];
 
   return (
     <div className="min-h-screen bg-background pb-24">

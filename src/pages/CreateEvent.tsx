@@ -6,6 +6,9 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import BottomNav from "@/components/BottomNav";
 import { useToast } from "@/hooks/use-toast";
+import { createEventRecord } from "@/data/appDatabase";
+import { useAuth } from "@/contexts/AuthContext";
+import type { EventCategory } from "@/data/mockEvents";
 
 const CATEGORY_OPTIONS = [
   { value: "social", label: "Social" },
@@ -18,6 +21,7 @@ const CATEGORY_OPTIONS = [
 const CreateEvent = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
+  const { auth } = useAuth();
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [location, setLocation] = useState("");
@@ -39,9 +43,26 @@ const CreateEvent = () => {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    const createdEvent = createEventRecord({
+      title,
+      description,
+      image: imagePreview ?? "https://images.unsplash.com/photo-1523580846011-d3a5bc25702b?auto=format&fit=crop&w=1200&q=80",
+      category: category as EventCategory,
+      date,
+      time,
+      location,
+      capacity: Number(capacity) || 100,
+      tags: tags
+        .split(",")
+        .map((tag) => tag.trim())
+        .filter(Boolean),
+      creatorName: auth.userName || "Campus Officer",
+      creatorRole: auth.role,
+      creatorUserId: auth.userId,
+    });
     toast({
       title: "Event Created",
-      description: `"${title}" has been published to the feed.`,
+      description: `"${createdEvent.title}" has been published to the feed.`,
     });
     navigate("/");
   };
