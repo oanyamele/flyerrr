@@ -54,7 +54,7 @@ const NotificationSettings = () => {
 
       <div className="py-4">
         <Section title="General">
-          <Row label="Allow Notifications" description="Receive notifications from flyerrr" checked={settings.allowNotifications} onToggle={() => toggle("allowNotifications")} />
+          <Row label="Allow Notifications" description="Receive notifications from flyer" checked={settings.allowNotifications} onToggle={() => toggle("allowNotifications")} />
           <Row label="Sounds" description="Play a sound for notifications" checked={settings.sounds} onToggle={() => toggle("sounds")} />
           <Row label="Badges" description="Show badge count on app icon" checked={settings.badges} onToggle={() => toggle("badges")} />
           <Row label="Lock Screen" description="Show notifications on lock screen" checked={settings.lockScreen} onToggle={() => toggle("lockScreen")} />

@@ -1,3 +1,3 @@
-# Welcome to your Lovable project
+# flyer
 
 TODO: Document your project here

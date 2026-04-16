@@ -19,7 +19,7 @@ const EventCard = ({ event }: EventCardProps) => {
     <motion.div
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
-      className="relative h-[calc(100vh-10rem)] snap-start flex-shrink-0 rounded-3xl overflow-hidden mx-4 mb-4 shadow-xl"
+      className="relative mx-auto mb-3 h-[calc(100dvh-11rem)] min-h-[26rem] w-[calc(100%-1rem)] max-w-2xl snap-start flex-shrink-0 overflow-hidden rounded-3xl shadow-xl sm:mb-4 sm:w-[calc(100%-2rem)]"
       onClick={() => navigate(`/event/${event.id}`)}
     >
       {/* Background Image */}
@@ -33,7 +33,7 @@ const EventCard = ({ event }: EventCardProps) => {
       <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
 
       {/* Top: Org Info */}
-      <div className="absolute top-4 left-4 right-16 flex items-center gap-3">
+      <div className="absolute left-4 right-16 top-4 flex items-center gap-3">
         <div className="w-10 h-10 rounded-full bg-primary/90 flex items-center justify-center text-primary-foreground text-xs font-bold">
           {event.org.avatar}
         </div>
@@ -49,13 +49,13 @@ const EventCard = ({ event }: EventCardProps) => {
       </div>
 
       {/* Right Side Actions */}
-      <div className="absolute right-4 top-1/2 -translate-y-1/2 flex flex-col items-center gap-5">
+      <div className="absolute right-3 top-1/2 flex -translate-y-1/2 flex-col items-center gap-4 sm:right-4 sm:gap-5">
         <button
           onClick={(e) => { e.stopPropagation(); setLiked(!liked); }}
           className="flex flex-col items-center gap-1 tap-highlight-none"
         >
           <motion.div whileTap={{ scale: 1.3 }}>
-            <Heart className={`w-7 h-7 ${liked ? "fill-primary text-primary" : "text-primary-foreground"}`} />
+            <Heart className={`h-6 w-6 sm:h-7 sm:w-7 ${liked ? "fill-primary text-primary" : "text-primary-foreground"}`} />
           </motion.div>
           <span className="text-[10px] text-primary-foreground font-medium">{event.attendees}</span>
         </button>
@@ -64,7 +64,7 @@ const EventCard = ({ event }: EventCardProps) => {
           className="flex flex-col items-center gap-1 tap-highlight-none"
         >
           <motion.div whileTap={{ scale: 1.3 }}>
-            <Bookmark className={`w-7 h-7 ${saved ? "fill-primary text-primary" : "text-primary-foreground"}`} />
+            <Bookmark className={`h-6 w-6 sm:h-7 sm:w-7 ${saved ? "fill-primary text-primary" : "text-primary-foreground"}`} />
           </motion.div>
           <span className="text-[10px] text-primary-foreground font-medium">Save</span>
         </button>
@@ -72,13 +72,13 @@ const EventCard = ({ event }: EventCardProps) => {
           onClick={(e) => e.stopPropagation()}
           className="flex flex-col items-center gap-1 tap-highlight-none"
         >
-          <Share2 className="w-7 h-7 text-primary-foreground" />
+          <Share2 className="h-6 w-6 text-primary-foreground sm:h-7 sm:w-7" />
           <span className="text-[10px] text-primary-foreground font-medium">Share</span>
         </button>
       </div>
 
       {/* Bottom: Event Info */}
-      <div className="absolute bottom-0 left-0 right-0 p-5 pb-6">
+      <div className="absolute bottom-0 left-0 right-0 p-4 pb-5 sm:p-5 sm:pb-6">
         {/* Friends going */}
         {event.friendsGoing.length > 0 && (
           <div className="flex items-center gap-1.5 mb-3">
@@ -97,7 +97,7 @@ const EventCard = ({ event }: EventCardProps) => {
           </div>
         )}
 
-        <h2 className="text-xl font-bold text-primary-foreground mb-2 leading-tight">{event.title}</h2>
+        <h2 className="mb-2 text-lg font-bold leading-tight text-primary-foreground sm:text-xl">{event.title}</h2>
 
         <div className="flex flex-wrap gap-1.5 mb-3">
           {event.tags.map((tag) => (
@@ -107,9 +107,9 @@ const EventCard = ({ event }: EventCardProps) => {
           ))}
         </div>
 
-        <div className="flex items-center gap-4 text-xs text-primary-foreground/80">
-          <span className="flex items-center gap-1"><Clock className="w-3.5 h-3.5" /> {event.date} · {event.time}</span>
-          <span className="flex items-center gap-1"><MapPin className="w-3.5 h-3.5" /> {event.location}</span>
+        <div className="flex flex-wrap items-center gap-2 text-[11px] text-primary-foreground/80 sm:gap-4 sm:text-xs">
+          <span className="flex items-center gap-1"><Clock className="h-3.5 w-3.5" /> {event.date} · {event.time}</span>
+          <span className="flex items-center gap-1"><MapPin className="h-3.5 w-3.5" /> {event.location}</span>
         </div>
 
         {/* Capacity bar */}

@@ -1,4 +1,5 @@
 import { createContext, useContext, useState, ReactNode } from "react";
+import { type AppUser } from "@/data/appDatabase";
 
 export type UserRole = "student" | "org_officer";
 
@@ -6,11 +7,14 @@ interface AuthState {
   isLoggedIn: boolean;
   role: UserRole;
   userName: string;
+  email?: string;
+  userId?: string;
 }
 
 interface AuthContextType {
   auth: AuthState;
-  login: (role: UserRole, name: string) => void;
+  login: (role: UserRole, name: string, options?: { email?: string; userId?: string }) => void;
+  loginWithUser: (user: AppUser) => void;
   logout: () => void;
 }
 
@@ -22,10 +26,14 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     return saved ? JSON.parse(saved) : { isLoggedIn: false, role: "student", userName: "" };
   });
 
-  const login = (role: UserRole, name: string) => {
-    const state = { isLoggedIn: true, role, userName: name };
+  const login = (role: UserRole, name: string, options?: { email?: string; userId?: string }) => {
+    const state = { isLoggedIn: true, role, userName: name, email: options?.email, userId: options?.userId };
     setAuth(state);
     localStorage.setItem("flyerrr_auth", JSON.stringify(state));
+  };
+
+  const loginWithUser = (user: AppUser) => {
+    login(user.role, user.name, { email: user.email, userId: user.id });
   };
 
   const logout = () => {
@@ -34,7 +42,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   };
 
   return (
-    <AuthContext.Provider value={{ auth, login, logout }}>
+    <AuthContext.Provider value={{ auth, login, loginWithUser, logout }}>
       {children}
     </AuthContext.Provider>
   );

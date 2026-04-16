@@ -1,25 +1,27 @@
 import { useState } from "react";
-import { Bell, Plus } from "lucide-react";
+import { Bell, Plus, Send } from "lucide-react";
 import CategoryFilter from "@/components/CategoryFilter";
 import EventCard from "@/components/EventCard";
 import WeeklyDigest from "@/components/WeeklyDigest";
 import BottomNav from "@/components/BottomNav";
-import { mockEvents, type EventCategory } from "@/data/mockEvents";
+import { type EventCategory } from "@/data/mockEvents";
 import { useAuth } from "@/contexts/AuthContext";
 import { useFollow } from "@/contexts/FollowContext";
 import { useNavigate } from "react-router-dom";
+import { listEventRecords } from "@/data/appDatabase";
 
 const Index = () => {
   const [activeCategory, setActiveCategory] = useState<EventCategory | "all" | "following">("all");
   const { auth } = useAuth();
   const { followedOrgIds } = useFollow();
   const navigate = useNavigate();
+  const events = listEventRecords();
 
   const filtered = activeCategory === "following"
-    ? mockEvents.filter((e) => followedOrgIds.includes(e.org.id))
+    ? events.filter((e) => followedOrgIds.includes(e.org.id))
     : activeCategory === "all"
-    ? mockEvents
-    : mockEvents.filter((e) => e.category === activeCategory);
+    ? events
+    : events.filter((e) => e.category === activeCategory);
 
   return (
     <div className="min-h-screen bg-background pb-24">
@@ -27,7 +29,10 @@ const Index = () => {
       <header className="sticky top-0 z-40 bg-background/80 backdrop-blur-xl">
         <div className="flex items-center justify-between px-5 pt-[max(1rem,env(safe-area-inset-top))] pb-2">
           <div className="flex-1" />
-          <h1 className="text-3xl font-extrabold text-primary tracking-tight">flyerrr</h1>
+          <h1 className="flex items-center gap-2 text-3xl font-extrabold text-primary tracking-tight">
+            <Send className="h-6 w-6 rotate-12" />
+            <span>flyer</span>
+          </h1>
           <div className="flex-1 flex justify-end gap-2">
             {auth.role === "org_officer" && (
               <button
@@ -50,7 +55,7 @@ const Index = () => {
       <WeeklyDigest />
 
       {/* Event Feed */}
-      <div className="snap-y snap-mandatory">
+      <div className="mx-auto max-w-3xl snap-y snap-mandatory">
         {filtered.map((event) => (
           <EventCard key={event.id} event={event} />
         ))}
