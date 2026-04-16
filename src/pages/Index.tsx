@@ -2,17 +2,20 @@ import { useState } from "react";
 import { Bell, Plus, Send } from "lucide-react";
 import CategoryFilter from "@/components/CategoryFilter";
 import EventCard from "@/components/EventCard";
-import WeeklyDigest from "@/components/WeeklyDigest";
 import BottomNav from "@/components/BottomNav";
-import { type EventCategory } from "@/data/mockEvents";
+import { mockEvents, type EventCategory } from "@/data/mockEvents";
 import { useAuth } from "@/contexts/AuthContext";
 import { useFollow } from "@/contexts/FollowContext";
 import { useNavigate } from "react-router-dom";
 import { listEventRecords } from "@/data/appDatabase";
 
+import { useFollow } from "@/contexts/FollowContext";
+import { useNavigate } from "react-router-dom";
+import FilterBar from "@/components/FilterBar";
+import EventDetailModal from "@/components/EventDetailModal";
+
 const Index = () => {
   const [activeCategory, setActiveCategory] = useState<EventCategory | "all" | "following">("all");
-  const { auth } = useAuth();
   const { followedOrgIds } = useFollow();
   const navigate = useNavigate();
   const events = listEventRecords();
@@ -50,24 +53,37 @@ const Index = () => {
         </div>
         <CategoryFilter active={activeCategory} onChange={setActiveCategory} />
       </header>
+  const selectedEvent = selectedEventId ? mockEvents.find((e) => e.id === selectedEventId) : undefined;
 
-      {/* Weekly Digest */}
-      <WeeklyDigest />
+  return (
+    <div className="relative h-[100svh] bg-background">
+      <FilterBar selectedCategory={activeCategory} onCategoryChange={setActiveCategory} />
 
-      {/* Event Feed */}
-      <div className="mx-auto max-w-3xl snap-y snap-mandatory">
+      <div className="snap-container hide-scrollbar h-[100svh]">
         {filtered.map((event) => (
-          <EventCard key={event.id} event={event} />
+          <EventCard
+            key={event.id}
+            event={event}
+            onOpenDetail={() => setSelectedEventId(event.id)}
+          />
         ))}
+
+        {filtered.length === 0 && (
+          <div className="h-[100svh] flex flex-col items-center justify-center text-muted-foreground snap-item">
+            <p className="text-lg font-semibold">No events found</p>
+            <p className="text-sm">
+              {activeCategory === "following" ? "Follow organizations to see their events here" : "Try a different category"}
+            </p>
+          </div>
+        )}
       </div>
 
-      {filtered.length === 0 && (
-        <div className="flex flex-col items-center justify-center py-20 text-muted-foreground">
-          <p className="text-lg font-semibold">No events found</p>
-          <p className="text-sm">
-            {activeCategory === "following" ? "Follow organizations to see their events here" : "Try a different category"}
-          </p>
-        </div>
+      {selectedEvent && (
+        <EventDetailModal
+          event={selectedEvent}
+          onClose={() => setSelectedEventId(null)}
+          onOpenFullDetails={(event) => navigate(`/event/${event.id}`)}
+        />
       )}
 
       <BottomNav />
