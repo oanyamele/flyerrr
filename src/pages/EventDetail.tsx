@@ -2,16 +2,16 @@ import { useParams, useNavigate } from "react-router-dom";
 import { ArrowLeft, Bookmark, Share2, MapPin, Clock, Users, CheckCircle2 } from "lucide-react";
 import { motion } from "framer-motion";
 import { useState } from "react";
-import { mockEvents } from "@/data/mockEvents";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useFollow } from "@/contexts/FollowContext";
 import BottomNav from "@/components/BottomNav";
+import { listEventRecords } from "@/data/appDatabase";
 
 const EventDetail = () => {
   const { id } = useParams();
   const navigate = useNavigate();
-  const event = mockEvents.find((e) => e.id === id);
+  const event = listEventRecords().find((e) => e.id === id);
   const [rsvp, setRsvp] = useState(false);
   const { isFollowing, toggleFollow } = useFollow();
 
@@ -28,7 +28,7 @@ const EventDetail = () => {
   return (
     <div className="min-h-screen bg-background pb-24">
       {/* Hero */}
-      <div className="relative h-[55vh]">
+      <div className="relative h-[42dvh] min-h-[17rem] max-h-[30rem] sm:h-[55vh]">
         <img src={event.image} alt={event.title} className="w-full h-full object-cover" />
         <div className="absolute inset-0 bg-gradient-to-t from-background via-transparent to-black/30" />
 
@@ -53,9 +53,9 @@ const EventDetail = () => {
       <motion.div
         initial={{ opacity: 0, y: 30 }}
         animate={{ opacity: 1, y: 0 }}
-        className="relative -mt-12 px-5"
+        className="relative mx-auto -mt-10 w-full max-w-3xl px-4 sm:-mt-12 sm:px-5"
       >
-        <div className="bg-card rounded-3xl p-5 shadow-lg border border-border">
+        <div className="rounded-3xl border border-border bg-card p-4 shadow-lg sm:p-5">
           {/* Org */}
           <div className="flex items-center gap-3 mb-4">
             <div className="w-12 h-12 rounded-full bg-primary flex items-center justify-center text-primary-foreground text-sm font-bold">
@@ -80,7 +80,7 @@ const EventDetail = () => {
             </Button>
           </div>
 
-          <h1 className="text-2xl font-extrabold text-foreground mb-2">{event.title}</h1>
+          <h1 className="mb-2 text-xl font-extrabold text-foreground sm:text-2xl">{event.title}</h1>
 
           <div className="flex flex-wrap gap-1.5 mb-4">
             {event.tags.map((tag) => (

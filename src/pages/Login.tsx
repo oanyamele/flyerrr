@@ -2,22 +2,47 @@ import { useState } from "react";
 import { useAuth, UserRole } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { User, Building2, ArrowRight } from "lucide-react";
+import { User, Building2, ArrowRight, Send } from "lucide-react";
 import { motion } from "framer-motion";
+import { useNavigate } from "react-router-dom";
+import { useToast } from "@/hooks/use-toast";
+import { authenticateUser, createUser } from "@/data/appDatabase";
 
 const Login = () => {
-  const { login } = useAuth();
+  const { loginWithUser } = useAuth();
+  const navigate = useNavigate();
+  const { toast } = useToast();
   const [step, setStep] = useState<"role" | "form">("role");
   const [role, setRole] = useState<UserRole>("student");
+  const [authMode, setAuthMode] = useState<"signin" | "signup">("signin");
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (name.trim() && email.trim()) {
-      login(role, name.trim());
+    if (!email.trim() || !password.trim()) return;
+
+    if (authMode === "signup") {
+      if (!name.trim()) return;
+      const result = createUser({ email, password, name, role });
+      if (!result.ok) {
+        toast({ title: "Sign Up failed", description: result.error, variant: "destructive" });
+        return;
+      }
+      loginWithUser(result.user);
+      toast({ title: "Account created", description: "Welcome to flyer." });
+      navigate("/", { replace: true });
+      return;
     }
+
+    const signIn = authenticateUser({ email, password, role });
+    if (!signIn.ok) {
+      toast({ title: "Sign In failed", description: signIn.error, variant: "destructive" });
+      return;
+    }
+    loginWithUser(signIn.user);
+    navigate("/", { replace: true });
   };
 
   return (
@@ -27,12 +52,15 @@ const Login = () => {
         animate={{ opacity: 1, y: 0 }}
         className="w-full max-w-sm"
       >
-        <h1 className="text-4xl font-extrabold text-primary text-center mb-2 tracking-tight">flyerrr</h1>
+        <h1 className="mb-2 flex items-center justify-center gap-2 text-center text-4xl font-extrabold tracking-tight text-primary">
+          <Send className="h-7 w-7 rotate-12" />
+          <span>flyer</span>
+        </h1>
         <p className="text-sm text-muted-foreground text-center mb-10">Discover campus events. Show up. Get rewarded.</p>
 
         {step === "role" ? (
           <div className="space-y-4">
-            <p className="text-sm font-semibold text-foreground text-center mb-4">How will you use flyerrr?</p>
+            <p className="text-sm font-semibold text-foreground text-center mb-4">How will you use flyer?</p>
 
             <button
               onClick={() => { setRole("student"); setStep("form"); }}
@@ -78,16 +106,24 @@ const Login = () => {
             </button>
 
             <p className="text-sm font-semibold text-foreground">
-              {role === "student" ? "Student Sign In" : "Organization Officer Sign In"}
+              {role === "student"
+                ? authMode === "signin"
+                  ? "Student Sign In"
+                  : "Student Sign Up"
+                : authMode === "signin"
+                ? "Organization Officer Sign In"
+                : "Organization Officer Sign Up"}
             </p>
 
-            <Input
-              placeholder="Full Name"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              className="rounded-xl h-12"
-              required
-            />
+            {authMode === "signup" && (
+              <Input
+                placeholder="Full Name"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                className="rounded-xl h-12"
+                required={authMode === "signup"}
+              />
+            )}
             <Input
               type="email"
               placeholder="University Email"
@@ -106,11 +142,18 @@ const Login = () => {
             />
 
             <Button type="submit" className="w-full h-12 rounded-xl text-base font-bold">
-              Sign In
+              {authMode === "signin" ? "Sign In" : "Create Account"}
             </Button>
 
             <p className="text-xs text-center text-muted-foreground">
-              Don't have an account? <span className="text-primary font-semibold cursor-pointer">Sign Up</span>
+              {authMode === "signin" ? "Don't have an account?" : "Already have an account?"}{" "}
+              <button
+                type="button"
+                onClick={() => setAuthMode((prev) => (prev === "signin" ? "signup" : "signin"))}
+                className="text-primary font-semibold"
+              >
+                {authMode === "signin" ? "Sign Up" : "Sign In"}
+              </button>
             </p>
           </motion.form>
         )}

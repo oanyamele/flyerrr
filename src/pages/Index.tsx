@@ -1,7 +1,14 @@
 import { useState } from "react";
+import { Bell, Plus, Send } from "lucide-react";
+import CategoryFilter from "@/components/CategoryFilter";
 import EventCard from "@/components/EventCard";
 import BottomNav from "@/components/BottomNav";
 import { mockEvents, type EventCategory } from "@/data/mockEvents";
+import { useAuth } from "@/contexts/AuthContext";
+import { useFollow } from "@/contexts/FollowContext";
+import { useNavigate } from "react-router-dom";
+import { listEventRecords } from "@/data/appDatabase";
+
 import { useFollow } from "@/contexts/FollowContext";
 import { useNavigate } from "react-router-dom";
 import FilterBar from "@/components/FilterBar";
@@ -11,14 +18,41 @@ const Index = () => {
   const [activeCategory, setActiveCategory] = useState<EventCategory | "all" | "following">("all");
   const { followedOrgIds } = useFollow();
   const navigate = useNavigate();
-  const [selectedEventId, setSelectedEventId] = useState<string | null>(null);
+  const events = listEventRecords();
 
   const filtered = activeCategory === "following"
-    ? mockEvents.filter((e) => followedOrgIds.includes(e.org.id))
+    ? events.filter((e) => followedOrgIds.includes(e.org.id))
     : activeCategory === "all"
-    ? mockEvents
-    : mockEvents.filter((e) => e.category === activeCategory);
+    ? events
+    : events.filter((e) => e.category === activeCategory);
 
+  return (
+    <div className="min-h-screen bg-background pb-24">
+      {/* Header */}
+      <header className="sticky top-0 z-40 bg-background/80 backdrop-blur-xl">
+        <div className="flex items-center justify-between px-5 pt-[max(1rem,env(safe-area-inset-top))] pb-2">
+          <div className="flex-1" />
+          <h1 className="flex items-center gap-2 text-3xl font-extrabold text-primary tracking-tight">
+            <Send className="h-6 w-6 rotate-12" />
+            <span>flyer</span>
+          </h1>
+          <div className="flex-1 flex justify-end gap-2">
+            {auth.role === "org_officer" && (
+              <button
+                onClick={() => navigate("/create-event")}
+                className="w-10 h-10 rounded-full bg-primary flex items-center justify-center"
+              >
+                <Plus className="w-5 h-5 text-primary-foreground" />
+              </button>
+            )}
+            <button className="relative w-10 h-10 rounded-full bg-secondary flex items-center justify-center">
+              <Bell className="w-5 h-5 text-foreground" />
+              <span className="absolute top-1 right-1 w-2.5 h-2.5 bg-accent rounded-full border-2 border-background" />
+            </button>
+          </div>
+        </div>
+        <CategoryFilter active={activeCategory} onChange={setActiveCategory} />
+      </header>
   const selectedEvent = selectedEventId ? mockEvents.find((e) => e.id === selectedEventId) : undefined;
 
   return (
