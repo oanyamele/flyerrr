@@ -4,6 +4,7 @@ import { useState } from "react";
 import type { CampusEvent } from "@/data/mockEvents";
 import { Badge } from "@/components/ui/badge";
 import { useFollow } from "@/contexts/FollowContext";
+import { useNavigate } from "react-router-dom";
 
 interface EventCardProps {
   event: CampusEvent;
@@ -14,6 +15,7 @@ const EventCard = ({ event, onOpenDetail }: EventCardProps) => {
   const [liked, setLiked] = useState(false);
   const [saved, setSaved] = useState(event.saved);
   const { isFollowing, toggleFollow } = useFollow();
+  const navigate = useNavigate();
   const attendancePercent = Math.round((event.attendees / event.capacity) * 100);
   const likeCount = event.likes + (liked ? 1 : 0);
 
@@ -39,7 +41,7 @@ const EventCard = ({ event, onOpenDetail }: EventCardProps) => {
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       className="relative mx-auto mb-3 h-[calc(100dvh-11rem)] min-h-[26rem] w-[calc(100%-1rem)] max-w-2xl snap-start flex-shrink-0 overflow-hidden rounded-3xl shadow-xl sm:mb-4 sm:w-[calc(100%-2rem)]"
-      onClick={() => navigate(`/event/${event.id}`)}
+      onClick={() => (onOpenDetail ? onOpenDetail(event) : navigate(`/event/${event.id}`))}
     >
       {/* Background Image */}
       <img
