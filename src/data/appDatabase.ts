@@ -117,9 +117,41 @@ const writeDb = (db: AppDatabase) => {
   return next;
 };
 
+const syncSeedEvents = (db: AppDatabase) => {
+  const seedById = new Map(mockEvents.map((event) => [event.id, event]));
+  let changed = false;
+
+  const nextEvents = db.events.map((event) => {
+    const seeded = seedById.get(event.id);
+    if (!seeded) return event;
+
+    const synced = {
+      ...event,
+      ...seeded,
+      createdAt: event.createdAt,
+      createdByUserId: event.createdByUserId,
+    };
+    if (JSON.stringify(synced) !== JSON.stringify(event)) changed = true;
+    return synced;
+  });
+
+  const existingIds = new Set(nextEvents.map((event) => event.id));
+  const missingSeededEvents = mockEvents
+    .filter((event) => !existingIds.has(event.id))
+    .map(toSeedEvent);
+
+  if (missingSeededEvents.length > 0) {
+    changed = true;
+    nextEvents.push(...missingSeededEvents);
+  }
+
+  if (!changed) return db;
+  return writeDb({ ...db, events: nextEvents });
+};
+
 export const getDatabase = (): AppDatabase => {
   const existing = safeRead();
-  if (existing) return existing;
+  if (existing) return syncSeedEvents(existing);
   const seed = defaultDatabase();
   localStorage.setItem(DB_KEY, JSON.stringify(seed));
   return seed;
@@ -214,6 +246,7 @@ export const createEventRecord = (input: {
     capacity: input.capacity || 100,
     friendsGoing: [],
     saved: false,
+    likes: 0,
     tags: input.tags,
     createdAt: nowIso(),
     createdByUserId: input.creatorUserId,

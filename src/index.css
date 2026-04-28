@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
+@import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap");
 
 @tailwind base;
 @tailwind components;
@@ -6,35 +6,35 @@
 
 @layer base {
   :root {
-    --background: 0 0% 100%;
-    --foreground: 213 50% 15%;
+    --background: 204 100% 97%;
+    --foreground: 217 59% 11%;
 
     --card: 0 0% 100%;
-    --card-foreground: 213 50% 15%;
+    --card-foreground: 217 59% 11%;
 
     --popover: 0 0% 100%;
-    --popover-foreground: 213 50% 15%;
+    --popover-foreground: 217 59% 11%;
 
-    --primary: 213 60% 23%;
+    --primary: 201 96% 32%;
     --primary-foreground: 0 0% 100%;
 
-    --secondary: 204 30% 94%;
-    --secondary-foreground: 213 50% 15%;
+    --secondary: 43 96% 64%;
+    --secondary-foreground: 0 0% 100%;
 
-    --muted: 204 30% 94%;
-    --muted-foreground: 213 20% 50%;
+    --muted: 204 100% 97%;
+    --muted-foreground: 215 20% 35%;
 
-    --accent: 354 78% 56%;
-    --accent-foreground: 0 0% 100%;
+    --accent: 199 89% 48%;
+    --accent-foreground: 217 59% 11%;
 
     --destructive: 354 78% 56%;
     --destructive-foreground: 0 0% 100%;
 
-    --border: 210 20% 90%;
-    --input: 210 20% 90%;
-    --ring: 213 60% 23%;
+    --border: 199 94% 86%;
+    --input: 199 94% 86%;
+    --ring: 201 96% 32%;
 
-    --radius: 1rem;
+    --radius: 12px;
 
     --success: 152 60% 45%;
     --success-foreground: 0 0% 100%;
@@ -43,7 +43,7 @@
     --warning-foreground: 0 0% 100%;
 
     --surface-elevated: 0 0% 100%;
-    --surface-sunken: 210 20% 96%;
+    --surface-sunken: 204 100% 97%;
 
     --sidebar-background: 0 0% 98%;
     --sidebar-foreground: 240 5.3% 26.1%;
@@ -54,38 +54,37 @@
     --sidebar-border: 220 13% 91%;
     --sidebar-ring: 217.2 91.2% 59.8%;
 
-    font-family: 'Plus Jakarta Sans', system-ui, sans-serif;
+    font-family: "Inter", system-ui, sans-serif;
   }
 
   .dark {
-    /* Dark mode theme sourced from campus-scroll-flyrrr tokens */
-    --background: 0 0% 5%;
-    --foreground: 0 0% 100%;
+    --background: 212 81% 6%;
+    --foreground: 214 32% 91%;
 
-    --card: 0 0% 9%;
-    --card-foreground: 0 0% 100%;
+    --card: 217 59% 11%;
+    --card-foreground: 214 32% 91%;
 
-    --popover: 0 0% 9%;
-    --popover-foreground: 0 0% 100%;
+    --popover: 217 59% 11%;
+    --popover-foreground: 214 32% 91%;
 
-    --primary: 0 85% 50%;
-    --primary-foreground: 0 0% 100%;
+    --primary: 198 93% 60%;
+    --primary-foreground: 212 81% 6%;
 
-    --secondary: 220 90% 55%;
-    --secondary-foreground: 0 0% 100%;
+    --secondary: 43 96% 64%;
+    --secondary-foreground: 212 81% 6%;
 
-    --muted: 0 0% 15%;
-    --muted-foreground: 0 0% 65%;
+    --muted: 217 59% 11%;
+    --muted-foreground: 215 16% 47%;
 
-    --accent: 220 90% 55%;
-    --accent-foreground: 0 0% 100%;
+    --accent: 200 94% 74%;
+    --accent-foreground: 212 81% 6%;
 
     --destructive: 0 84.2% 60.2%;
     --destructive-foreground: 0 0% 100%;
 
-    --border: 0 0% 18%;
-    --input: 0 0% 18%;
-    --ring: 0 85% 50%;
+    --border: 211 52% 25%;
+    --input: 211 52% 25%;
+    --ring: 198 93% 60%;
 
     --success: 152 60% 45%;
     --success-foreground: 0 0% 100%;
@@ -93,8 +92,8 @@
     --warning: 38 92% 55%;
     --warning-foreground: 0 0% 100%;
 
-    --surface-elevated: 0 0% 9%;
-    --surface-sunken: 0 0% 7%;
+    --surface-elevated: 217 59% 11%;
+    --surface-sunken: 212 81% 6%;
 
     --sidebar-background: 0 0% 7%;
     --sidebar-foreground: 0 0% 90%;
@@ -113,6 +112,12 @@
   }
   body {
     @apply bg-background text-foreground antialiased;
+    font-size: 14px;
+    line-height: 1.6;
+  }
+
+  .border {
+    border-width: 0.5px;
   }
 }
 
