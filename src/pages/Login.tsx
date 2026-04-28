@@ -52,7 +52,7 @@ const Login = () => {
         animate={{ opacity: 1, y: 0 }}
         className="w-full max-w-sm"
       >
-        <h1 className="mb-2 flex items-center justify-center gap-2 text-center text-4xl font-extrabold tracking-tight text-primary">
+        <h1 className="mb-2 flex items-center justify-center gap-2 text-center text-4xl font-medium tracking-tight text-primary">
           <Send className="h-7 w-7 rotate-12" />
           <span>flyer</span>
         </h1>

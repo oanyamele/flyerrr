@@ -80,7 +80,7 @@ const EventDetail = () => {
             </Button>
           </div>
 
-          <h1 className="mb-2 text-xl font-extrabold text-foreground sm:text-2xl">{event.title}</h1>
+          <h1 className="mb-2 text-[15px] font-medium text-foreground">{event.title}</h1>
 
           <div className="flex flex-wrap gap-1.5 mb-4">
             {event.tags.map((tag) => (
@@ -88,7 +88,7 @@ const EventDetail = () => {
             ))}
           </div>
 
-          <p className="text-sm text-muted-foreground leading-relaxed mb-5">{event.description}</p>
+          <p className="mb-5 text-sm leading-[1.6] text-foreground">{event.description}</p>
 
           {/* Details */}
           <div className="space-y-3 mb-5">
@@ -97,7 +97,7 @@ const EventDetail = () => {
                 <Clock className="w-4 h-4 text-primary" />
               </div>
               <div>
-                <p className="font-semibold text-foreground">{event.date}</p>
+                <p className="text-xs font-normal text-muted-foreground">{event.date}</p>
                 <p className="text-xs text-muted-foreground">{event.time}</p>
               </div>
             </div>
@@ -106,7 +106,7 @@ const EventDetail = () => {
                 <MapPin className="w-4 h-4 text-primary" />
               </div>
               <div>
-                <p className="font-semibold text-foreground">{event.location}</p>
+                <p className="text-xs font-normal text-muted-foreground">{event.location}</p>
                 <p className="text-xs text-muted-foreground">Tap for directions</p>
               </div>
             </div>
