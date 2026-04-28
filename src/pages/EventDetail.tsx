@@ -1,18 +1,26 @@
 import { useParams, useNavigate } from "react-router-dom";
-import { ArrowLeft, Bookmark, Share2, MapPin, Clock, Users, CheckCircle2 } from "lucide-react";
+import { ArrowLeft, Bookmark, Share2, MapPin, Clock, Users, CheckCircle2, QrCode } from "lucide-react";
 import { motion } from "framer-motion";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useFollow } from "@/contexts/FollowContext";
 import BottomNav from "@/components/BottomNav";
 import { listEventRecords } from "@/data/appDatabase";
+import { useAuth } from "@/contexts/AuthContext";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { isRsvped, issueDynamicCheckInToken, secondsRemaining, toggleRsvp } from "@/data/checkInStore";
 
 const EventDetail = () => {
   const { id } = useParams();
   const navigate = useNavigate();
   const event = listEventRecords().find((e) => e.id === id);
+  const { auth } = useAuth();
   const [rsvp, setRsvp] = useState(false);
+  const [qrOpen, setQrOpen] = useState(false);
+  const [token, setToken] = useState("");
+  const [expiresAt, setExpiresAt] = useState(0);
+  const [tick, setTick] = useState(0);
   const { isFollowing, toggleFollow } = useFollow();
 
   if (!event) {
@@ -24,6 +32,32 @@ const EventDetail = () => {
   }
 
   const attendancePercent = Math.round((event.attendees / event.capacity) * 100);
+  const countdown = secondsRemaining(expiresAt);
+  void tick;
+
+  useEffect(() => {
+    if (!auth.userId || !event) return;
+    setRsvp(isRsvped(event.id, auth.userId));
+  }, [auth.userId, event]);
+
+  useEffect(() => {
+    if (!qrOpen || !auth.userId || !event) return;
+
+    const refreshToken = () => {
+      const issued = issueDynamicCheckInToken(event.id, auth.userId);
+      setToken(issued.token);
+      setExpiresAt(issued.expiresAt);
+    };
+
+    refreshToken();
+    const refreshInterval = window.setInterval(refreshToken, 20_000);
+    const secondTick = window.setInterval(() => setTick((current) => current + 1), 1_000);
+
+    return () => {
+      window.clearInterval(refreshInterval);
+      window.clearInterval(secondTick);
+    };
+  }, [qrOpen, auth.userId, event]);
 
   return (
     <div className="min-h-screen bg-background pb-24">
@@ -145,7 +179,11 @@ const EventDetail = () => {
 
           {/* RSVP Button */}
           <Button
-            onClick={() => setRsvp(!rsvp)}
+            onClick={() => {
+              if (!auth.userId || !event) return;
+              const next = toggleRsvp(event.id, auth.userId);
+              setRsvp(next);
+            }}
             className={`w-full h-12 rounded-2xl text-base font-bold transition-all ${
               rsvp ? "bg-success text-success-foreground" : ""
             }`}
@@ -157,8 +195,47 @@ const EventDetail = () => {
               "RSVP - I'm in!"
             )}
           </Button>
+          {rsvp && (
+            <Button
+              variant="outline"
+              className="mt-3 h-11 w-full rounded-[8px]"
+              onClick={() => setQrOpen(true)}
+            >
+              <QrCode className="mr-2 h-4 w-4" />
+              Show QR Backup Check-In
+            </Button>
+          )}
         </div>
       </motion.div>
+
+      <Dialog open={qrOpen} onOpenChange={setQrOpen}>
+        <DialogContent className="max-w-sm rounded-[12px] border border-border bg-card p-5">
+          <DialogHeader>
+            <DialogTitle className="text-[15px] font-medium">Backup QR Check-In</DialogTitle>
+            <DialogDescription className="text-xs">
+              This code refreshes every 20 seconds. Screenshots will not validate.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3">
+            <div className="rounded-[12px] border border-border bg-surface-sunken p-4">
+              <div className="grid grid-cols-12 gap-0.5 rounded-[8px] bg-background p-2">
+                {Array.from(token.slice(0, 144)).map((char, index) => (
+                  <div
+                    key={`${char}-${index}`}
+                    className={`h-2 w-2 rounded-[2px] ${char.charCodeAt(0) % 2 === 0 ? "bg-foreground" : "bg-transparent"}`}
+                  />
+                ))}
+              </div>
+            </div>
+            <p className="text-center text-xs text-muted-foreground">
+              Refreshes in <span className="font-semibold text-foreground">{countdown}s</span>
+            </p>
+            <p className="break-all rounded-[8px] bg-secondary/20 px-2 py-1 text-[10px] text-muted-foreground">
+              {token}
+            </p>
+          </div>
+        </DialogContent>
+      </Dialog>
 
       <BottomNav />
     </div>

@@ -52,7 +52,12 @@ const Index = () => {
             >
               {theme === "dark" ? <Sun className="h-5 w-5 text-foreground" /> : <Moon className="h-5 w-5 text-foreground" />}
             </button>
-            <button className="relative flex h-10 w-10 items-center justify-center rounded-full bg-secondary">
+            <button
+              onClick={() => navigate("/event-reminders")}
+              className="relative flex h-10 w-10 items-center justify-center rounded-full bg-secondary"
+              aria-label="Open event reminders"
+              title="Event reminders"
+            >
               <Bell className="h-5 w-5 text-foreground" />
               <span className="absolute right-1 top-1 h-2.5 w-2.5 rounded-full border-2 border-background bg-accent" />
             </button>
