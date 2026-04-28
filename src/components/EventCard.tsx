@@ -40,7 +40,7 @@ const EventCard = ({ event, onOpenDetail }: EventCardProps) => {
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       className="relative mx-auto mb-3 w-[calc(100%-1rem)] max-w-xl snap-start overflow-hidden rounded-[12px] border border-border bg-card shadow-md sm:mb-4 sm:w-[calc(100%-2rem)]"
-      onClick={() => navigate(`/event/${event.id}`)}
+      onClick={() => (onOpenDetail ? onOpenDetail(event) : navigate(`/event/${event.id}`))}
     >
       <div className="relative aspect-[3/4] w-full overflow-hidden bg-surface-sunken">
         <img
