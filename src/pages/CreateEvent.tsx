@@ -43,28 +43,37 @@ const CreateEvent = () => {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    const createdEvent = createEventRecord({
-      title,
-      description,
-      image: imagePreview ?? "https://images.unsplash.com/photo-1523580846011-d3a5bc25702b?auto=format&fit=crop&w=1200&q=80",
-      category: category as EventCategory,
-      date,
-      time,
-      location,
-      capacity: Number(capacity) || 100,
-      tags: tags
-        .split(",")
-        .map((tag) => tag.trim())
-        .filter(Boolean),
-      creatorName: auth.userName || "Campus Officer",
-      creatorRole: auth.role,
-      creatorUserId: auth.userId,
-    });
-    toast({
-      title: "Event Created",
-      description: `"${createdEvent.title}" has been published to the feed.`,
-    });
-    navigate("/");
+    try {
+      const createdEvent = createEventRecord({
+        title,
+        description,
+        image: imagePreview ?? "https://images.unsplash.com/photo-1523580846011-d3a5bc25702b?auto=format&fit=crop&w=1200&q=80",
+        category: category as EventCategory,
+        date,
+        time,
+        location,
+        capacity: Number(capacity) || 100,
+        tags: tags
+          .split(",")
+          .map((tag) => tag.trim())
+          .filter(Boolean),
+        creatorName: auth.userName || "Campus Officer",
+        creatorRole: auth.role,
+        creatorUserId: auth.userId,
+      });
+      toast({
+        title: "Event Created",
+        description: `"${createdEvent.title}" has been published to the feed.`,
+      });
+      navigate("/", { state: { refreshFeed: Date.now() } });
+    } catch (error) {
+      toast({
+        title: "Publish failed",
+        description: "Could not save this event. Try a smaller image or retry.",
+        variant: "destructive",
+      });
+      console.error("Failed to publish event", error);
+    }
   };
 
   return (

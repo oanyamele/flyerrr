@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Bell, Moon, Plus, Send, Sun } from "lucide-react";
 import CategoryFilter from "@/components/CategoryFilter";
 import EventCard from "@/components/EventCard";
@@ -8,7 +8,7 @@ import { type EventCategory } from "@/data/mockEvents";
 import { useAuth } from "@/contexts/AuthContext";
 import { useFollow } from "@/contexts/FollowContext";
 import { useTheme } from "@/contexts/ThemeContext";
-import { useNavigate } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import { listEventRecords } from "@/data/appDatabase";
 
 const Index = () => {
@@ -17,7 +17,12 @@ const Index = () => {
   const { followedOrgIds } = useFollow();
   const { theme, toggleTheme } = useTheme();
   const navigate = useNavigate();
-  const events = listEventRecords();
+  const location = useLocation();
+  const [events, setEvents] = useState(() => listEventRecords());
+
+  useEffect(() => {
+    setEvents(listEventRecords());
+  }, [location.key]);
 
   const filtered =
     activeCategory === "following"
