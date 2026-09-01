@@ -1,0 +1,72 @@
+# CI gate — closes risk R-09 from docs/PROJECT_RESET_REPORT.md
+#
+# After merging, enable branch protection on `main` and require the "verify" check:
+#   Settings → Branches → Add rule → Require status checks to pass → verify
+
+name: CI
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  verify:
+    name: verify
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      # The project requires Node >= 20 (Vite 5, ESLint 9).
+      # It fails outright on Node 16 — see risk R-12.
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+
+      - name: Typecheck
+        run: npx tsc --noEmit -p tsconfig.app.json
+
+      # Currently 5 errors (R-07, and 3 in generated shadcn/ui files).
+      # Remove `continue-on-error` once issue "Fix conditional React hooks" lands.
+      - name: Lint
+        run: npx eslint .
+        continue-on-error: true
+
+      - name: Test
+        run: npm test
+
+      - name: Build
+        run: npm run build
+
+      - name: Report bundle size
+        run: |
+          echo "### Bundle size" >> "$GITHUB_STEP_SUMMARY"
+          echo '```' >> "$GITHUB_STEP_SUMMARY"
+          du -h dist/assets/*.js dist/assets/*.css >> "$GITHUB_STEP_SUMMARY"
+          echo '```' >> "$GITHUB_STEP_SUMMARY"
+
+  audit:
+    name: dependency audit
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      # Currently 11 vulnerabilities (10 high) — see R-13.
+      # Tighten to `--audit-level=high` without continue-on-error once resolved.
+      - run: npm audit --production --audit-level=high
+        continue-on-error: true
