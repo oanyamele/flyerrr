@@ -26,17 +26,24 @@ set -euo pipefail
 REPO="${REPO:-oanyamele/flyerrr}"
 OWNER="${REPO%%/*}"
 PROJECT_NUMBER=""
+PROJECT_OWNER=""
 DRY_RUN=false
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
     --dry-run) DRY_RUN=true; shift ;;
     --project) PROJECT_NUMBER="$2"; shift 2 ;;
+    --project-owner) PROJECT_OWNER="$2"; shift 2 ;;
     --repo)    REPO="$2"; OWNER="${REPO%%/*}"; shift 2 ;;
     -h|--help) sed -n '2,26p' "$0"; exit 0 ;;
     *) echo "Unknown option: $1" >&2; exit 1 ;;
   esac
 done
+
+# The project board is not necessarily owned by the repo owner — a personal
+# board (e.g. "gh project list --owner @me") is common. Default to the repo
+# owner but let --project-owner override it.
+PROJECT_OWNER="${PROJECT_OWNER:-$OWNER}"
 
 log()  { printf '\033[0;36m▸\033[0m %s\n' "$*"; }
 ok()   { printf '\033[0;32m✓\033[0m %s\n' "$*"; }
@@ -95,8 +102,8 @@ issue() {
   ok "$title → $url"
   CREATED=$((CREATED + 1))
   if [[ -n "$PROJECT_NUMBER" ]]; then
-    gh project item-add "$PROJECT_NUMBER" --owner "$OWNER" --url "$url" >/dev/null 2>&1 \
-      && printf '      ↳ added to project %s\n' "$PROJECT_NUMBER" \
+    gh project item-add "$PROJECT_NUMBER" --owner "$PROJECT_OWNER" --url "$url" >/dev/null 2>&1 \
+      && printf '      ↳ added to project %s (%s)\n' "$PROJECT_NUMBER" "$PROJECT_OWNER" \
       || warn "      ↳ could not add to project (need: gh auth refresh -s project)"
   fi
 }
