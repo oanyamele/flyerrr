@@ -1,13 +1,14 @@
 # Project Reset Report — **flyerrr**
 
-**Deliverable 1: Project Reset & Architecture Baseline**
+**Lab 1: Project Reset & Architecture Baseline**
 
 | | |
 |---|---|
 | **Project** | flyerrr — campus event discovery & attendance |
 | **Repository** | `github.com/oanyamele/flyerrr` (private) |
-| **Audited commit** | `f0c475a` on `main` |
-| **Audit date** | August 27, 2026 · re-verified September 1, 2026 (HEAD unchanged) |
+| **Baseline commit** | `f0c475a` on `main` |
+| **Current reference** | `f6c7136` on `main` |
+| **Audit date** | August 27, 2026; repository and board status refreshed September 10, 2026 |
 | **Team** | oanyamele · neaylasimone · nadcaesar · Brian-Two |
 | **Origin** | Lovable.dev generated scaffold, extended by hand |
 
@@ -27,11 +28,13 @@ work as designed, and no amount of polish will make it work.** Tracing that flow
 end (§3, R-01/R-02) shows attendance is never recorded anywhere, and all four screens that
 display attendance, points, and badges read hardcoded arrays.
 
-Senior Project II therefore does not begin with new features. It begins with **building
-the server tier that the prototype has been faking**, and with **converting a draft-note
-project board into a traceable, estimated backlog**.
+Senior Project II therefore does not begin with new screens. It begins with **building
+the server tier that the prototype has been faking**. The first reset action - converting
+the draft-note board into a traceable, estimated backlog - has now been completed; the
+remaining work is to use that backlog to replace local-only behavior with a secure,
+multi-user system.
 
-### Readiness scorecard
+### Baseline readiness scorecard (`f0c475a`)
 
 | Dimension | Rating | One-line justification |
 |---|:--:|---|
@@ -46,12 +49,26 @@ project board into a traceable, estimated backlog**.
 | Backlog quality | 🟠 **Weak** | Board exists but holds draft notes only — see §4 |
 | Documentation | 🔴 **Critical gap** | README is literally `TODO: Document your project here` |
 
+### Progress snapshot (September 10, 2026)
+
+| Area | Verified progress | Remaining gap |
+|---|---|---|
+| Backlog | 29 real GitHub Issues on the project board: 25 Backlog, 3 In Review, 1 Done | Reconcile the 29 live issues with the expanded 88-row feature backlog in `docs/backlog.csv` |
+| Process | One GitHub Actions workflow exists; four milestones and project-specific labels exist | `main` still has no branch protection; the four historical PRs are not linked to issues |
+| Backend architecture | Backend ADR and relational schema have separate pushed branches and are In Review | Team approval and merge are still required; no backend is deployed yet |
+| Package management | Bun standardization is implemented on a pushed branch and is In Review | `main` still contains three lockfiles until the review is merged |
+
+This progress does not erase the baseline findings below. It records which reset actions
+have been completed and prevents the report from presenting the original board audit as
+the current state.
+
 ---
 
 ## 1. Method
 
-Findings are evidence-based, not impressions. Every claim below was produced by executing
-something against the repository at `f0c475a`:
+Findings are evidence-based, not impressions. The architectural claims below were produced
+by executing checks against the repository at `f0c475a`. Repository and board process
+signals were refreshed against `main` and GitHub on September 10, 2026:
 
 ```bash
 bun install                       # 491 packages
@@ -309,70 +326,64 @@ Adopting them *during* R-04 costs nothing extra; retrofitting later costs a rewr
 
 ## 4. Backlog Health Assessment
 
-### 4.1 What was audited
+### 4.1 Current verified state
 
 | Signal | Command | Result |
 |---|---|---|
-| GitHub Issues (all states) | `gh issue list --state all` | **0** |
-| Open issue count | `gh api repos/oanyamele/flyerrr` | **0** |
-| Milestones | `gh api .../milestones` | **0** |
-| Labels | `gh api .../labels` | 9 — all GitHub defaults, none project-specific |
-| Pull requests | `gh pr list --state all` | 4, all merged, **0 linked to an issue** |
-| Project board | manual verification by team¹ | **Exists — draft/note items only** |
-| CI workflows | `gh api .../actions/workflows` | **0** |
-| Branch protection on `main` | `gh api .../branches/main/protection` | **404 Not Found** |
-
-¹ The board itself cannot be read via API with the team's current `gh` token — the
-Projects v2 API requires the `read:project` scope
-(`gh auth refresh -s read:project`, then re-run the query in Appendix A). Every
-repository-level signal in this table was re-verified via API on 2026-09-01 and is
-unchanged. Board contents were confirmed by direct inspection.
+| GitHub Issues (all states) | `gh issue list --state all` | **29** |
+| Project board status | Issue project metadata | **25 Backlog, 3 In Review, 1 Done** |
+| Technical-debt coverage | Issue labels | **13 issues labeled `tech-debt`** |
+| Milestones | GitHub API | **4** |
+| Labels | GitHub API | **23**, including project-specific priority, domain, owner, and debt labels |
+| Pull requests | `gh pr list --state all` | **4 merged historical PRs**; none linked to the new issue workflow |
+| Backlog source | `docs/backlog.csv` | **88 feature-level rows** with owners, priorities, estimates, dependencies, and acceptance criteria |
+| CI workflows | GitHub API | **1** |
+| Branch protection on `main` | GitHub API | **404 Not Found** - not enabled |
 
 ### 4.2 Assessment
 
-The course requirement — *backlog items placed on a GitHub Project Board* — **is met in
-form.** A board exists and holds items. But every item is a **draft note** typed directly
-into a column rather than a real GitHub Issue, and that distinction is what makes the
-backlog unusable for Senior Project II.
+The board has moved from a collection of draft notes to an operational backlog. All 29
+live cards are real GitHub Issues with owners, labels, estimates, and testable acceptance
+criteria. The board now reflects the reset report's major architectural, security,
+testing, process, and code-health findings. Three implemented issues are visibly In Review,
+and one governance issue is Done.
 
-A draft card is a sticky note. It cannot be assigned, labeled, estimated, linked to a pull
-request, closed by a commit, filtered, or referenced from code review. The evidence of the
-consequence is already in the repo: **four merged pull requests, none of which references
-an issue.** There is no trace from "we decided to build this" to "here is the code that
-built it." With four contributors, that traceability is the difference between a team and
-four people editing the same folder.
+Two readiness gaps remain. First, the four historical merged pull requests predate the new
+workflow and are not linked to issues. Second, `docs/backlog.csv` has since been expanded
+to 88 feature-level rows, so the team must verify which rows should become additional
+issues and avoid treating the existing 29-issue board as complete by default.
 
 ### 4.3 Scored rubric
 
 | Criterion | Score | Finding |
 |---|:--:|---|
-| Items exist on a board | 🟢 4/5 | Board is populated — the requirement is satisfied |
-| Items are real GitHub Issues | 🔴 0/5 | Draft notes only; 0 Issues exist in the repository |
-| Acceptance criteria defined | 🔴 0/5 | Draft cards carry a title and nothing else |
-| Estimated / sized | 🔴 0/5 | No estimate field, no story points |
-| Assigned to an owner | 🔴 0/5 | Draft items cannot hold assignees |
-| Labeled / categorized | 🔴 1/5 | Only the 9 default GitHub labels; none applied |
-| Prioritized | 🟠 2/5 | Column position implies order; no explicit priority field |
-| Linked to PRs / commits | 🔴 0/5 | 4 of 4 PRs unlinked |
-| Grouped into milestones/sprints | 🔴 0/5 | 0 milestones |
-| Reflects known technical debt | 🔴 0/5 | None of the 19 risks in §3 appears on the board |
-| **Total** | **🔴 7 / 50 (14%)** | **Present but not yet a working backlog** |
+| Items exist on a board | 🟢 5/5 | 29 issue-backed cards are present |
+| Items are real GitHub Issues | 🟢 5/5 | All live board cards are Issues rather than draft notes |
+| Acceptance criteria defined | 🟢 5/5 | Issue bodies use verifiable checklist criteria |
+| Estimated / sized | 🟢 5/5 | Issues include estimates and backlog CSV rows include story points |
+| Assigned to an owner | 🟢 5/5 | Live issues have named assignees |
+| Labeled / categorized | 🟢 5/5 | Priority, feature, process, security, test, and debt labels are applied |
+| Prioritized | 🟢 4/5 | P0/P1/P2 labels and ordered sprint plans exist |
+| Linked to PRs / commits | 🟠 2/5 | New work uses issue branches, but the historical PRs remain unlinked |
+| Grouped into milestones/sprints | 🟢 5/5 | Four milestones exist and backlog rows specify sprints |
+| Reflects known technical debt | 🟢 5/5 | 13 live issues carry the `tech-debt` label |
+| **Total** | **🟢 46 / 50 (92%)** | **Operational; CSV-to-board completeness still needs validation** |
 
-### 4.4 Remediation — resources provided
+### 4.4 Remediation artifacts and current disposition
 
 Three artifacts accompany this report to close the gap:
 
 | File | Purpose |
 |---|---|
-| `docs/backlog.csv` | 29 backlog items — title, body, labels, priority, estimate, epic, sprint |
-| `scripts/seed-backlog.sh` | Creates the labels, milestones, and all 29 Issues via `gh`, then adds them to the Project Board |
-| `.github/workflows/ci.yml` | CI gate closing R-09 |
+| `docs/backlog.csv` | Expanded to 88 feature-level rows with owners, requirements, dependencies, and acceptance criteria |
+| `scripts/seed-backlog.sh` | Created the first 29 risk-driven Issues, labels, milestones, and project-board cards |
+| `.github/workflows/ci.yml` | CI gate exists on `main`; branch protection remains a separate action |
 
 Every backlog item traces to a specific finding in §3, so the board becomes the execution
 plan for this report rather than a parallel document.
 
-**Target state by end of Sprint 1:** ≥ 40/50 on the rubric above — all items as real Issues
-with acceptance criteria, estimates, owners, labels, and milestone assignment.
+**Next target:** reconcile the 88-row backlog source with the 29 live issues, require issue
+links in new pull requests, and enable branch protection with CI as a required check.
 
 ---
 
@@ -479,9 +490,9 @@ Deferring these is a decision, not an oversight:
 | Risk | Mitigation |
 |---|---|
 | 42% of commits are bot-authored; team ownership of `src/data/` and `src/contexts/` is unproven | Sprint 3 code-reading session; require a human reviewer on every PR touching those directories |
-| Four contributors, zero linked PRs, no branch protection | Sprint 0 items 2 and 7 make this structural rather than a matter of discipline |
+| Four contributors, historical PRs unlinked, no branch protection | Require issue references in new PRs and make the existing CI workflow a protected-branch check |
 | Backend is new scope for the team | Timebox the stack decision to Week 2; prefer boring and well-documented (Postgres + a managed host) over novel |
-| No one currently owns the schema | Assign an owner in Sprint 0; item 9 is the highest-leverage decision of the semester |
+| Backend ADR and schema are awaiting team approval | Review the two documents before implementation so the team does not build against an unapproved contract |
 
 ---
 
@@ -491,11 +502,10 @@ flyerrr enters Senior Project II with a genuine asset and a genuine debt. The as
 polished, coherent, mobile-first interface across 14 routes and two user roles, built on a
 clean design-token system. The debt is that essentially none of it is connected to anything.
 
-The audit found **19 tracked risks (81 story points)**, of which four are blocking, and a
-project board that satisfies the letter of the backlog requirement while providing none of
-its value. Both are addressable — the backlog gap in one sprint, the architecture gap in
-three — and the accompanying `scripts/seed-backlog.sh` converts this report into 29 tracked,
-estimated Issues on the board in a single command.
+The audit found **19 tracked risks (81 story points)**, of which four are blocking. The
+project board has since been converted into 29 tracked, estimated, assigned Issues, with
+three implementation items In Review and one governance item Done. The process foundation
+is therefore usable; the architectural gap remains the defining work of the semester.
 
 The semester's success criterion is a single sentence: **a student checks in on one device
 and an officer verifies it on another.** Every priority in §5 exists to serve it.
@@ -522,12 +532,14 @@ gh api repos/oanyamele/flyerrr/actions/workflows --jq '.total_count'
 | Total source lines (`src/`) | ≈ 7,623 |
 | Source files | 80 |
 | Routes | 14 |
-| Commits (all branches) | 26 |
+| Commits (all branches) | 34 |
 | Commits authored by `gpt-engineer-app[bot]` | 11 (42%) |
 | Contributors | 4 humans + 1 bot |
 | Merged pull requests | 4 |
-| GitHub Issues | 0 |
-| CI workflows | 0 |
+| GitHub Issues | 29 |
+| Project board | 25 Backlog / 3 In Review / 1 Done |
+| Milestones | 4 |
+| CI workflows | 1 |
 | Test files / meaningful assertions | 1 / 0 |
 | ESLint errors / warnings | 5 / 11 |
 | Dependency vulnerabilities | 11 (10 high, 1 moderate) |
