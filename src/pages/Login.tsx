@@ -117,6 +117,7 @@ const Login = () => {
 
             {authMode === "signup" && (
               <Input
+                aria-label="Full Name"
                 placeholder="Full Name"
                 value={name}
                 onChange={(e) => setName(e.target.value)}
@@ -126,6 +127,7 @@ const Login = () => {
             )}
             <Input
               type="email"
+              aria-label="University Email"
               placeholder="University Email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
@@ -134,6 +136,7 @@ const Login = () => {
             />
             <Input
               type="password"
+              aria-label="Password"
               placeholder="Password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}

@@ -60,8 +60,8 @@ const OrganizationVerificationQueue = () => {
       <header className="sticky top-0 z-40 border-b border-border bg-background/90 backdrop-blur-xl">
         <div className="mx-auto w-full max-w-3xl px-4 pt-[max(0.75rem,env(safe-area-inset-top))] pb-3 sm:px-6">
           <div className="flex items-center gap-3">
-            <button onClick={() => navigate(-1)} className="flex h-10 w-10 items-center justify-center rounded-full bg-secondary">
-              <ArrowLeft className="h-5 w-5 text-foreground" />
+            <button type="button" aria-label="Go back" onClick={() => navigate(-1)} className="flex h-10 w-10 items-center justify-center rounded-full bg-secondary">
+              <ArrowLeft aria-hidden="true" className="h-5 w-5 text-foreground" />
             </button>
             <div>
               <h1 className="text-lg font-bold text-foreground sm:text-xl">Organization Verification Queue</h1>

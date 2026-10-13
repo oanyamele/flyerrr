@@ -8,6 +8,7 @@ import { issueDynamicCheckInToken, secondsRemaining, validateCheckInToken } from
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import CheckInQr from "@/components/CheckInQr";
 
 const TapIn = () => {
   const { auth } = useAuth();
@@ -77,7 +78,7 @@ const TapIn = () => {
               aria-label="Open backup QR check-in"
               title="Backup QR check-in"
             >
-              <QrCode className="h-5 w-5 text-foreground" />
+              <QrCode aria-hidden="true" className="h-5 w-5 text-foreground" />
             </button>
           )}
         </div>
@@ -105,6 +106,7 @@ const TapIn = () => {
 
             <div className="w-full max-w-xs space-y-3">
               <select
+                aria-label="Select event for check-in"
                 value={selectedEventId}
                 onChange={(event) => setSelectedEventId(event.target.value)}
                 className="h-10 w-full rounded-[8px] border border-border bg-background px-3 text-sm"
@@ -140,6 +142,7 @@ const TapIn = () => {
               </div>
               <label className="mb-2 block text-xs text-muted-foreground">Event</label>
               <select
+                aria-label="Select event to validate"
                 value={selectedEventId}
                 onChange={(event) => setSelectedEventId(event.target.value)}
                 className="mb-3 h-10 w-full rounded-[8px] border border-border bg-background px-3 text-sm"
@@ -152,6 +155,7 @@ const TapIn = () => {
               </select>
               <label className="mb-2 block text-xs text-muted-foreground">Scanned QR payload</label>
               <textarea
+                aria-label="Scanned QR payload"
                 value={scannedToken}
                 onChange={(event) => setScannedToken(event.target.value)}
                 className="h-24 w-full rounded-[8px] border border-border bg-background px-3 py-2 text-xs"
@@ -191,25 +195,7 @@ const TapIn = () => {
               Show this to an organizer scanner. Code refreshes every 20 seconds.
             </DialogDescription>
           </DialogHeader>
-          <div className="space-y-3">
-            {selectedEvent && <p className="text-xs text-muted-foreground">{selectedEvent.title}</p>}
-            <div className="rounded-[12px] border border-border bg-surface-sunken p-4">
-              <div className="grid grid-cols-12 gap-0.5 rounded-[8px] bg-background p-2">
-                {Array.from(token.slice(0, 144)).map((char, index) => (
-                  <div
-                    key={`${char}-${index}`}
-                    className={`h-2 w-2 rounded-[2px] ${char.charCodeAt(0) % 2 === 0 ? "bg-foreground" : "bg-transparent"}`}
-                  />
-                ))}
-              </div>
-            </div>
-            <p className="text-center text-xs text-muted-foreground">
-              Refreshes in <span className="font-semibold text-foreground">{countdown}s</span>
-            </p>
-            <p className="break-all rounded-[8px] bg-secondary/20 px-2 py-1 text-[10px] text-muted-foreground">
-              {token}
-            </p>
-          </div>
+          <CheckInQr token={token} eventTitle={selectedEvent?.title} countdown={countdown} />
         </DialogContent>
       </Dialog>
 

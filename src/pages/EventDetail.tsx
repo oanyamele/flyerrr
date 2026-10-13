@@ -7,6 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { useFollow } from "@/contexts/FollowContext";
 import BottomNav from "@/components/BottomNav";
 import { listEventRecords } from "@/data/appDatabase";
+import CheckInQr from "@/components/CheckInQr";
 import { useAuth } from "@/contexts/AuthContext";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { isRsvped, issueDynamicCheckInToken, secondsRemaining, toggleRsvp } from "@/data/checkInStore";
@@ -67,18 +68,20 @@ const EventDetail = () => {
         <div className="absolute inset-0 bg-gradient-to-t from-background via-transparent to-black/30" />
 
         <button
+          type="button"
           onClick={() => navigate(-1)}
+          aria-label="Go back"
           className="absolute top-[max(1rem,env(safe-area-inset-top))] left-4 w-10 h-10 rounded-full bg-background/80 backdrop-blur flex items-center justify-center"
         >
-          <ArrowLeft className="w-5 h-5 text-foreground" />
+          <ArrowLeft aria-hidden="true" className="w-5 h-5 text-foreground" />
         </button>
 
         <div className="absolute top-[max(1rem,env(safe-area-inset-top))] right-4 flex gap-2">
-          <button className="w-10 h-10 rounded-full bg-background/80 backdrop-blur flex items-center justify-center">
-            <Share2 className="w-5 h-5 text-foreground" />
+          <button type="button" aria-label="Share event" className="w-10 h-10 rounded-full bg-background/80 backdrop-blur flex items-center justify-center">
+            <Share2 aria-hidden="true" className="w-5 h-5 text-foreground" />
           </button>
-          <button className="w-10 h-10 rounded-full bg-background/80 backdrop-blur flex items-center justify-center">
-            <Bookmark className="w-5 h-5 text-foreground" />
+          <button type="button" aria-label="Save event" className="w-10 h-10 rounded-full bg-background/80 backdrop-blur flex items-center justify-center">
+            <Bookmark aria-hidden="true" className="w-5 h-5 text-foreground" />
           </button>
         </div>
       </div>
@@ -216,24 +219,7 @@ const EventDetail = () => {
               This code refreshes every 20 seconds. Screenshots will not validate.
             </DialogDescription>
           </DialogHeader>
-          <div className="space-y-3">
-            <div className="rounded-[12px] border border-border bg-surface-sunken p-4">
-              <div className="grid grid-cols-12 gap-0.5 rounded-[8px] bg-background p-2">
-                {Array.from(token.slice(0, 144)).map((char, index) => (
-                  <div
-                    key={`${char}-${index}`}
-                    className={`h-2 w-2 rounded-[2px] ${char.charCodeAt(0) % 2 === 0 ? "bg-foreground" : "bg-transparent"}`}
-                  />
-                ))}
-              </div>
-            </div>
-            <p className="text-center text-xs text-muted-foreground">
-              Refreshes in <span className="font-semibold text-foreground">{countdown}s</span>
-            </p>
-            <p className="break-all rounded-[8px] bg-secondary/20 px-2 py-1 text-[10px] text-muted-foreground">
-              {token}
-            </p>
-          </div>
+          <CheckInQr token={token} eventTitle={event.title} countdown={countdown} />
         </DialogContent>
       </Dialog>
 

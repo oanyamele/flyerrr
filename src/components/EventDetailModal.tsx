@@ -53,7 +53,7 @@ const EventDetailModal = ({ event, onClose, onOpenFullDetails }: EventDetailModa
           className="absolute top-[max(1rem,env(safe-area-inset-top))] left-4 w-10 h-10 rounded-full bg-background/70 backdrop-blur flex items-center justify-center"
           aria-label="Close"
         >
-          <X className="w-5 h-5 text-foreground" />
+          <X aria-hidden="true" className="w-5 h-5 text-foreground" />
         </button>
 
         <div className="absolute top-[max(1rem,env(safe-area-inset-top))] right-4 flex gap-2">
@@ -63,9 +63,10 @@ const EventDetailModal = ({ event, onClose, onOpenFullDetails }: EventDetailModa
             className={`w-10 h-10 rounded-full backdrop-blur flex items-center justify-center ${
               liked ? "bg-primary" : "bg-background/70"
             }`}
-            aria-label="Like"
+            aria-label={liked ? "Unlike event" : "Like event"}
+            aria-pressed={liked}
           >
-            <Heart className={`w-5 h-5 ${liked ? "fill-primary-foreground text-primary-foreground" : "text-foreground"}`} />
+            <Heart aria-hidden="true" className={`w-5 h-5 ${liked ? "fill-primary-foreground text-primary-foreground" : "text-foreground"}`} />
           </button>
           <button
             type="button"
@@ -73,17 +74,18 @@ const EventDetailModal = ({ event, onClose, onOpenFullDetails }: EventDetailModa
             className={`w-10 h-10 rounded-full backdrop-blur flex items-center justify-center ${
               saved ? "bg-primary" : "bg-background/70"
             }`}
-            aria-label="Bookmark"
+            aria-label={saved ? "Unsave event" : "Save event"}
+            aria-pressed={saved}
           >
-            <Bookmark className={`w-5 h-5 ${saved ? "fill-primary-foreground text-primary-foreground" : "text-foreground"}`} />
+            <Bookmark aria-hidden="true" className={`w-5 h-5 ${saved ? "fill-primary-foreground text-primary-foreground" : "text-foreground"}`} />
           </button>
           <button
             type="button"
             onClick={handleShare}
             className="w-10 h-10 rounded-full bg-background/70 backdrop-blur flex items-center justify-center"
-            aria-label="Share"
+            aria-label="Share event"
           >
-            <Share2 className="w-5 h-5 text-foreground" />
+            <Share2 aria-hidden="true" className="w-5 h-5 text-foreground" />
           </button>
         </div>
       </div>

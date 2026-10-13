@@ -25,8 +25,8 @@ const EventReminders = () => {
     <div className="min-h-screen bg-background pb-8">
       <header className="sticky top-0 z-40 border-b border-border bg-background/90 backdrop-blur-xl">
         <div className="mx-auto flex w-full max-w-3xl items-center gap-3 px-4 pb-3 pt-[max(0.75rem,env(safe-area-inset-top))] sm:px-6">
-          <button onClick={() => navigate(-1)} className="flex h-10 w-10 items-center justify-center rounded-full bg-secondary/20">
-            <ArrowLeft className="h-5 w-5 text-foreground" />
+          <button type="button" aria-label="Go back" onClick={() => navigate(-1)} className="flex h-10 w-10 items-center justify-center rounded-full bg-secondary/20">
+            <ArrowLeft aria-hidden="true" className="h-5 w-5 text-foreground" />
           </button>
           <div>
             <h1 className="text-lg font-medium text-foreground">Event Reminders</h1>

@@ -4,7 +4,6 @@ import { Input } from "@/components/ui/input";
 import { mockOrgs, mockEvents } from "@/data/mockEvents";
 import { useNavigate } from "react-router-dom";
 import BottomNav from "@/components/BottomNav";
-import { Badge } from "@/components/ui/badge";
 
 const Explore = () => {
   const [search, setSearch] = useState("");
@@ -24,8 +23,10 @@ const Explore = () => {
       <header className="px-5 pt-[max(1.5rem,env(safe-area-inset-top))] pb-2">
         <h1 className="text-2xl font-extrabold text-foreground mb-3">Explore</h1>
         <div className="relative">
-          <SearchIcon className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+          <SearchIcon aria-hidden="true" className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
           <Input
+            type="search"
+            aria-label="Search events, organizations, or tags"
             placeholder="Search events, orgs, or tags..."
             className="pl-9 rounded-xl bg-secondary border-0 h-11"
             value={search}
@@ -62,14 +63,14 @@ const Explore = () => {
             </div>
             <div className="flex gap-2 flex-wrap">
               {["career fair", "hackathon", "game night", "open gym", "free food"].map((tag) => (
-                <Badge
+                <button
                   key={tag}
-                  variant="secondary"
-                  className="cursor-pointer"
+                  type="button"
                   onClick={() => setSearch(tag)}
+                  className="inline-flex items-center rounded-full bg-secondary px-2.5 py-0.5 text-xs font-semibold text-secondary-foreground"
                 >
                   {tag}
-                </Badge>
+                </button>
               ))}
             </div>
           </div>
