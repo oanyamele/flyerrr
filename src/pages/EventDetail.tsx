@@ -8,7 +8,7 @@ import { useFollow } from "@/contexts/FollowContext";
 import BottomNav from "@/components/BottomNav";
 import { listEventRecords } from "@/data/appDatabase";
 import CheckInQr from "@/components/CheckInQr";
-import { useAuth } from "@/contexts/AuthContext";
+import { useAuth } from "@/hooks/useAuth";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { isRsvped, issueDynamicCheckInToken, secondsRemaining, toggleRsvp } from "@/data/checkInStore";
 

@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useAuth, UserRole } from "@/contexts/AuthContext";
+import { useAuth, UserRole } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { User, Building2, ArrowRight, Send } from "lucide-react";

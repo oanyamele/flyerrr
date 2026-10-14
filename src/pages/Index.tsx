@@ -5,7 +5,7 @@ import EventCard from "@/components/EventCard";
 import WeeklyDigest from "@/components/WeeklyDigest";
 import BottomNav from "@/components/BottomNav";
 import { type EventCategory } from "@/data/mockEvents";
-import { useAuth } from "@/contexts/AuthContext";
+import { useAuth } from "@/hooks/useAuth";
 import { useFollow } from "@/contexts/FollowContext";
 import { useTheme } from "@/contexts/ThemeContext";
 import { useLocation, useNavigate } from "react-router-dom";

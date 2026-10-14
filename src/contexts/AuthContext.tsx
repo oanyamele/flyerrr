@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, ReactNode } from "react";
+import { createContext, useState, ReactNode } from "react";
 import { type AppUser } from "@/data/appDatabase";
 import {
   clearSession,
@@ -14,14 +14,14 @@ import {
 export type { UserRole };
 export type AuthState = AuthSession;
 
-interface AuthContextType {
+export interface AuthContextType {
   auth: AuthState;
   login: (role: UserRole, name: string, options?: { email?: string; userId?: string }) => void;
   loginWithUser: (user: AppUser) => void;
   logout: () => void;
 }
 
-const AuthContext = createContext<AuthContextType | null>(null);
+export const AuthContext = createContext<AuthContextType | null>(null);
 
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [auth, setAuth] = useState<AuthState>(() => loadSession());
@@ -48,10 +48,4 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       {children}
     </AuthContext.Provider>
   );
-};
-
-export const useAuth = () => {
-  const ctx = useContext(AuthContext);
-  if (!ctx) throw new Error("useAuth must be used within AuthProvider");
-  return ctx;
 };
