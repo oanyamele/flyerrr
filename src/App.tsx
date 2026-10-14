@@ -30,23 +30,33 @@ const ProtectedRoutes = () => {
   if (!auth.isLoggedIn) return <Navigate to="/login" replace />;
 
   return (
-    <Routes>
-      <Route path="/" element={<Index />} />
-      <Route path="/event/:id" element={<EventDetail />} />
-      <Route path="/explore" element={<Explore />} />
-      <Route path="/tap-in" element={<TapIn />} />
-      <Route path="/saved" element={<Saved />} />
-      <Route path="/profile" element={<Profile />} />
-      <Route path="/create-event" element={<CreateEvent />} />
-      <Route path="/attendance-history" element={<AttendanceHistory />} />
-      <Route path="/rewards" element={<RewardsPerks />} />
-      <Route path="/resume-builder" element={<ResumeBuilder />} />
-      <Route path="/notification-settings" element={<NotificationSettings />} />
-      <Route path="/event-reminders" element={<EventReminders />} />
-      <Route path="/org-verification-queue" element={<OrganizationVerificationQueue />} />
-      <Route path="/attendance-reports" element={<AttendanceReports />} />
-      <Route path="*" element={<NotFound />} />
-    </Routes>
+    <>
+      <a
+        href="#main-content"
+        className="sr-only focus:not-sr-only focus:absolute focus:left-4 focus:top-4 focus:z-[100] focus:rounded-[8px] focus:bg-primary focus:px-3 focus:py-2 focus:text-sm focus:font-medium focus:text-primary-foreground"
+      >
+        Skip to main content
+      </a>
+      <main id="main-content" tabIndex={-1}>
+        <Routes>
+          <Route path="/" element={<Index />} />
+          <Route path="/event/:id" element={<EventDetail />} />
+          <Route path="/explore" element={<Explore />} />
+          <Route path="/tap-in" element={<TapIn />} />
+          <Route path="/saved" element={<Saved />} />
+          <Route path="/profile" element={<Profile />} />
+          <Route path="/create-event" element={<CreateEvent />} />
+          <Route path="/attendance-history" element={<AttendanceHistory />} />
+          <Route path="/rewards" element={<RewardsPerks />} />
+          <Route path="/resume-builder" element={<ResumeBuilder />} />
+          <Route path="/notification-settings" element={<NotificationSettings />} />
+          <Route path="/event-reminders" element={<EventReminders />} />
+          <Route path="/org-verification-queue" element={<OrganizationVerificationQueue />} />
+          <Route path="/attendance-reports" element={<AttendanceReports />} />
+          <Route path="*" element={<NotFound />} />
+        </Routes>
+      </main>
+    </>
   );
 };
 

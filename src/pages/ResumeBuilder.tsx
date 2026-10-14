@@ -38,13 +38,17 @@ const ResumeBuilder = () => {
       <header className="sticky top-0 z-40 bg-background/80 backdrop-blur-xl border-b border-border">
         <div className="flex items-center justify-between px-5 pt-[max(1rem,env(safe-area-inset-top))] pb-3">
           <div className="flex items-center gap-3">
-            <button onClick={() => navigate(-1)} className="w-10 h-10 rounded-full bg-secondary flex items-center justify-center">
-              <ArrowLeft className="w-5 h-5 text-foreground" />
+            <button type="button" aria-label="Go back" onClick={() => navigate(-1)} className="w-10 h-10 rounded-full bg-secondary flex items-center justify-center">
+              <ArrowLeft aria-hidden="true" className="w-5 h-5 text-foreground" />
             </button>
             <h1 className="text-lg font-bold text-foreground">Resume Builder</h1>
           </div>
-          <button onClick={() => editing ? handleSave() : setEditing(true)}>
-            {editing ? <Save className="w-5 h-5 text-primary" /> : <Edit3 className="w-5 h-5 text-muted-foreground" />}
+          <button
+            type="button"
+            aria-label={editing ? "Save resume" : "Edit resume"}
+            onClick={() => editing ? handleSave() : setEditing(true)}
+          >
+            {editing ? <Save aria-hidden="true" className="w-5 h-5 text-primary" /> : <Edit3 aria-hidden="true" className="w-5 h-5 text-muted-foreground" />}
           </button>
         </div>
       </header>

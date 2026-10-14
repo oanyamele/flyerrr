@@ -20,8 +20,8 @@ const RewardsPerks = () => {
     <div className="min-h-screen bg-background pb-10">
       <header className="sticky top-0 z-40 bg-background/80 backdrop-blur-xl border-b border-border">
         <div className="flex items-center gap-3 px-5 pt-[max(1rem,env(safe-area-inset-top))] pb-3">
-          <button onClick={() => navigate(-1)} className="w-10 h-10 rounded-full bg-secondary flex items-center justify-center">
-            <ArrowLeft className="w-5 h-5 text-foreground" />
+          <button type="button" aria-label="Go back" onClick={() => navigate(-1)} className="w-10 h-10 rounded-full bg-secondary flex items-center justify-center">
+            <ArrowLeft aria-hidden="true" className="w-5 h-5 text-foreground" />
           </button>
           <h1 className="text-lg font-bold text-foreground">Rewards & Perks</h1>
         </div>

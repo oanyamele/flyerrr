@@ -18,6 +18,8 @@ const EventCard = ({ event, onOpenDetail }: EventCardProps) => {
   const navigate = useNavigate();
   const attendancePercent = Math.round((event.attendees / event.capacity) * 100);
 
+  const openEvent = () => (onOpenDetail ? onOpenDetail(event) : navigate(`/event/${event.id}`));
+
   const handleShare = async () => {
     const url = `${window.location.origin}/event/${event.id}`;
     if (navigator.share) {
@@ -36,11 +38,20 @@ const EventCard = ({ event, onOpenDetail }: EventCardProps) => {
   };
 
   return (
-    <motion.div
+    <motion.article
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
+      role="link"
+      tabIndex={0}
+      aria-label={`View ${event.title} by ${event.org.name}`}
       className="relative mx-auto mb-3 w-[calc(100%-1rem)] max-w-xl snap-start overflow-hidden rounded-[12px] border border-border bg-card shadow-md sm:mb-4 sm:w-[calc(100%-2rem)]"
-      onClick={() => (onOpenDetail ? onOpenDetail(event) : navigate(`/event/${event.id}`))}
+      onClick={openEvent}
+      onKeyDown={(e) => {
+        if (e.key === "Enter" || e.key === " ") {
+          e.preventDefault();
+          openEvent();
+        }
+      }}
     >
       <div className="relative aspect-[3/4] w-full overflow-hidden bg-surface-sunken">
         <img
@@ -53,34 +64,39 @@ const EventCard = ({ event, onOpenDetail }: EventCardProps) => {
         <div className="absolute right-3 top-1/2 flex -translate-y-1/2 flex-col items-center gap-4 sm:right-4">
           <button
             type="button"
+            aria-label={liked ? "Unlike event" : "Like event"}
+            aria-pressed={liked}
             onClick={(e) => { e.stopPropagation(); setLiked(!liked); }}
-            className="flex flex-col items-center gap-1 tap-highlight-none"
+            className="flex flex-col items-center gap-1 rounded-full bg-background/80 px-2 py-1.5 tap-highlight-none"
           >
             <motion.div whileTap={{ scale: 1.3 }}>
-              <Heart className={`h-6 w-6 sm:h-7 sm:w-7 ${liked ? "fill-primary text-primary" : "text-primary-foreground"}`} />
+              <Heart aria-hidden="true" className={`h-6 w-6 sm:h-7 sm:w-7 ${liked ? "fill-primary text-primary" : "text-foreground"}`} />
             </motion.div>
-            <span className="text-[10px] font-medium text-primary-foreground">Like</span>
+            <span className="text-[10px] font-medium text-foreground">Like</span>
           </button>
           <button
             type="button"
+            aria-label={saved ? "Unsave event" : "Save event"}
+            aria-pressed={saved}
             onClick={(e) => { e.stopPropagation(); setSaved(!saved); }}
-            className="flex flex-col items-center gap-1 tap-highlight-none"
+            className="flex flex-col items-center gap-1 rounded-full bg-background/80 px-2 py-1.5 tap-highlight-none"
           >
             <motion.div whileTap={{ scale: 1.3 }}>
-              <Bookmark className={`h-6 w-6 sm:h-7 sm:w-7 ${saved ? "fill-primary text-primary" : "text-primary-foreground"}`} />
+              <Bookmark aria-hidden="true" className={`h-6 w-6 sm:h-7 sm:w-7 ${saved ? "fill-primary text-primary" : "text-foreground"}`} />
             </motion.div>
-            <span className="text-[10px] font-medium text-primary-foreground">Save</span>
+            <span className="text-[10px] font-medium text-foreground">Save</span>
           </button>
           <button
             type="button"
+            aria-label="Share event"
             onClick={(e) => {
               e.stopPropagation();
               void handleShare();
             }}
-            className="flex flex-col items-center gap-1 tap-highlight-none"
+            className="flex flex-col items-center gap-1 rounded-full bg-background/80 px-2 py-1.5 tap-highlight-none"
           >
-            <Share2 className="h-6 w-6 text-primary-foreground sm:h-7 sm:w-7" />
-            <span className="text-[10px] font-medium text-primary-foreground">Share</span>
+            <Share2 aria-hidden="true" className="h-6 w-6 text-foreground sm:h-7 sm:w-7" />
+            <span className="text-[10px] font-medium text-foreground">Share</span>
           </button>
         </div>
       </div>
@@ -143,7 +159,7 @@ const EventCard = ({ event, onOpenDetail }: EventCardProps) => {
           </span>
         </div>
       </div>
-    </motion.div>
+    </motion.article>
   );
 };
 

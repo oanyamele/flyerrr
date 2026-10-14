@@ -36,8 +36,8 @@ const Profile = () => {
     <div className="min-h-screen bg-background pb-24">
       <header className="px-5 pt-[max(1.5rem,env(safe-area-inset-top))] pb-4 flex items-center justify-between">
         <h1 className="text-2xl font-extrabold text-foreground">Profile</h1>
-        <button className="w-10 h-10 rounded-full bg-secondary flex items-center justify-center">
-          <Settings className="w-5 h-5 text-foreground" />
+        <button type="button" aria-label="Settings" className="w-10 h-10 rounded-full bg-secondary flex items-center justify-center">
+          <Settings aria-hidden="true" className="w-5 h-5 text-foreground" />
         </button>
       </header>
 
@@ -63,20 +63,32 @@ const Profile = () => {
       {/* Dark Mode Toggle */}
       <div className="mx-5 mb-5 p-4 rounded-2xl bg-card border border-border flex items-center justify-between">
         <div className="flex items-center gap-3">
-          {theme === "dark" ? <Moon className="w-5 h-5 text-accent" /> : <Sun className="w-5 h-5 text-warning" />}
+          {theme === "dark" ? (
+            <Moon aria-hidden="true" className="w-5 h-5 text-accent" />
+          ) : (
+            <Sun aria-hidden="true" className="w-5 h-5 text-warning" />
+          )}
           <div>
-            <p className="text-sm font-semibold text-foreground">Dark Mode</p>
+            <p id="dark-mode-label" className="text-sm font-semibold text-foreground">
+              Dark Mode
+            </p>
             <p className="text-xs text-muted-foreground">{theme === "dark" ? "On" : "Off"}</p>
           </div>
         </div>
-        <Switch checked={theme === "dark"} onCheckedChange={toggleTheme} />
+        <Switch
+          id="dark-mode"
+          checked={theme === "dark"}
+          onCheckedChange={toggleTheme}
+          aria-labelledby="dark-mode-label"
+          aria-label="Toggle dark mode"
+        />
       </div>
 
       {/* Stats Grid */}
       <div className="grid grid-cols-2 gap-3 px-5 mb-5">
         {stats.map((s) => (
           <div key={s.label} className="p-4 rounded-2xl bg-card border border-border">
-            <s.icon className={`w-5 h-5 ${s.color} mb-2`} />
+            <s.icon aria-hidden="true" className={`w-5 h-5 ${s.color} mb-2`} />
             <p className="text-xl font-bold text-foreground">{s.value}</p>
             <p className="text-[11px] text-muted-foreground">{s.label}</p>
           </div>
@@ -88,13 +100,14 @@ const Profile = () => {
         {menuItems.map((item, i) => (
           <button
             key={item.label}
+            type="button"
             onClick={() => item.path && navigate(item.path)}
             className={`w-full flex items-center justify-between px-4 py-3.5 text-left tap-highlight-none ${
               i < menuItems.length - 1 ? "border-b border-border" : ""
             }`}
           >
             <span className="text-sm font-medium text-foreground">{item.label}</span>
-            <ChevronRight className="w-4 h-4 text-muted-foreground" />
+            <ChevronRight aria-hidden="true" className="w-4 h-4 text-muted-foreground" />
           </button>
         ))}
       </div>
@@ -106,7 +119,7 @@ const Profile = () => {
           className="w-full rounded-xl text-sm font-semibold text-destructive border-destructive/30"
           onClick={() => { logout(); navigate("/login"); }}
         >
-          <LogOut className="w-4 h-4 mr-2" />
+          <LogOut aria-hidden="true" className="w-4 h-4 mr-2" />
           Sign Out
         </Button>
       </div>

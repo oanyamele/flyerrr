@@ -43,10 +43,12 @@ const Index = () => {
           <div className="flex flex-1 justify-end gap-2">
             {auth.role === "org_officer" && (
               <button
+                type="button"
                 onClick={() => navigate("/create-event")}
+                aria-label="Create event"
                 className="flex h-10 w-10 items-center justify-center rounded-full bg-primary"
               >
-                <Plus className="h-5 w-5 text-primary-foreground" />
+                <Plus aria-hidden="true" className="h-5 w-5 text-primary-foreground" />
               </button>
             )}
             <button
@@ -63,7 +65,7 @@ const Index = () => {
               aria-label="Open event reminders"
               title="Event reminders"
             >
-              <Bell className="h-5 w-5 text-foreground" />
+              <Bell aria-hidden="true" className="h-5 w-5 text-foreground" />
               <span className="absolute right-1 top-1 h-2.5 w-2.5 rounded-full border-2 border-background bg-accent" />
             </button>
           </div>
