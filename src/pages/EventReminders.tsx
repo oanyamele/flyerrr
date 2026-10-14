@@ -1,7 +1,7 @@
 import { ArrowLeft, BellRing, CalendarClock, MapPin } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { listEventRecords } from "@/data/appDatabase";
-import { useAuth } from "@/contexts/AuthContext";
+import { useAuth } from "@/hooks/useAuth";
 import { getReminderEvents, getReminderMapForUser, setReminderEnabled } from "@/data/checkInStore";
 import { useMemo, useState } from "react";
 import { Switch } from "@/components/ui/switch";

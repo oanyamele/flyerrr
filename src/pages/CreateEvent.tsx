@@ -7,7 +7,7 @@ import { Textarea } from "@/components/ui/textarea";
 import BottomNav from "@/components/BottomNav";
 import { useToast } from "@/hooks/use-toast";
 import { createEventRecord } from "@/data/appDatabase";
-import { useAuth } from "@/contexts/AuthContext";
+import { useAuth } from "@/hooks/useAuth";
 import type { EventCategory } from "@/data/mockEvents";
 
 const CATEGORY_OPTIONS = [
