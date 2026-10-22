@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useFollow } from "@/contexts/FollowContext";
 import BottomNav from "@/components/BottomNav";
-import { listEventRecords } from "@/data/appDatabase";
+import { useRepositories } from "@/repositories/RepositoryProvider";
 import CheckInQr from "@/components/CheckInQr";
 import { useAuth } from "@/contexts/AuthContext";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -15,7 +15,8 @@ import { isRsvped, issueDynamicCheckInToken, secondsRemaining, toggleRsvp } from
 const EventDetail = () => {
   const { id } = useParams();
   const navigate = useNavigate();
-  const event = listEventRecords().find((e) => e.id === id);
+  const { events } = useRepositories();
+  const event = events.list().find((e) => e.id === id);
   const { auth } = useAuth();
   const [rsvp, setRsvp] = useState(false);
   const [qrOpen, setQrOpen] = useState(false);
@@ -23,18 +24,6 @@ const EventDetail = () => {
   const [expiresAt, setExpiresAt] = useState(0);
   const [tick, setTick] = useState(0);
   const { isFollowing, toggleFollow } = useFollow();
-
-  if (!event) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-background">
-        <p className="text-muted-foreground">Event not found</p>
-      </div>
-    );
-  }
-
-  const attendancePercent = Math.round((event.attendees / event.capacity) * 100);
-  const countdown = secondsRemaining(expiresAt);
-  void tick;
 
   useEffect(() => {
     if (!auth.userId || !event) return;
@@ -59,6 +48,18 @@ const EventDetail = () => {
       window.clearInterval(secondTick);
     };
   }, [qrOpen, auth.userId, event]);
+
+  if (!event) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <p className="text-muted-foreground">Event not found</p>
+      </div>
+    );
+  }
+
+  const attendancePercent = Math.round((event.attendees / event.capacity) * 100);
+  const countdown = secondsRemaining(expiresAt);
+  void tick;
 
   return (
     <div className="min-h-screen bg-background pb-24">

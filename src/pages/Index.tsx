@@ -9,7 +9,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useFollow } from "@/contexts/FollowContext";
 import { useTheme } from "@/contexts/ThemeContext";
 import { useLocation, useNavigate } from "react-router-dom";
-import { listEventRecords } from "@/data/appDatabase";
+import { useRepositories } from "@/repositories/RepositoryProvider";
 
 const Index = () => {
   const [activeCategory, setActiveCategory] = useState<EventCategory | "all" | "following">("all");
@@ -18,11 +18,12 @@ const Index = () => {
   const { theme, toggleTheme } = useTheme();
   const navigate = useNavigate();
   const location = useLocation();
-  const [events, setEvents] = useState(() => listEventRecords());
+  const { events: eventRepository } = useRepositories();
+  const [events, setEvents] = useState(() => eventRepository.list());
 
   useEffect(() => {
-    setEvents(listEventRecords());
-  }, [location.key]);
+    setEvents(eventRepository.list());
+  }, [location.key, eventRepository]);
 
   const filtered =
     activeCategory === "following"

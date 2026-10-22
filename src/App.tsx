@@ -6,6 +6,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { AuthProvider, useAuth } from "@/contexts/AuthContext";
 import { ThemeProvider } from "@/contexts/ThemeContext";
 import { FollowProvider } from "@/contexts/FollowContext";
+import { RepositoryProvider } from "@/repositories/RepositoryProvider";
 import Index from "./pages/Index";
 import EventDetail from "./pages/EventDetail";
 import Explore from "./pages/Explore";
@@ -65,16 +66,18 @@ const App = () => (
     <ThemeProvider>
       <AuthProvider>
         <FollowProvider>
-          <TooltipProvider>
-            <Toaster />
-            <Sonner />
-            <BrowserRouter>
-              <Routes>
-                <Route path="/login" element={<Login />} />
-                <Route path="/*" element={<ProtectedRoutes />} />
-              </Routes>
-            </BrowserRouter>
-          </TooltipProvider>
+          <RepositoryProvider>
+            <TooltipProvider>
+              <Toaster />
+              <Sonner />
+              <BrowserRouter>
+                <Routes>
+                  <Route path="/login" element={<Login />} />
+                  <Route path="/*" element={<ProtectedRoutes />} />
+                </Routes>
+              </BrowserRouter>
+            </TooltipProvider>
+          </RepositoryProvider>
         </FollowProvider>
       </AuthProvider>
     </ThemeProvider>

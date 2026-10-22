@@ -6,10 +6,11 @@ import { User, Building2, ArrowRight, Send } from "lucide-react";
 import { motion } from "framer-motion";
 import { useNavigate } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
-import { authenticateUser, createUser } from "@/data/appDatabase";
+import { useRepositories } from "@/repositories/RepositoryProvider";
 
 const Login = () => {
   const { loginWithUser } = useAuth();
+  const { users } = useRepositories();
   const navigate = useNavigate();
   const { toast } = useToast();
   const [step, setStep] = useState<"role" | "form">("role");
@@ -25,8 +26,8 @@ const Login = () => {
 
     if (authMode === "signup") {
       if (!name.trim()) return;
-      const result = createUser({ email, password, name, role });
-      if (!result.ok) {
+      const result = users.create({ email, password, name, role });
+      if (result.ok === false) {
         toast({ title: "Sign Up failed", description: result.error, variant: "destructive" });
         return;
       }
@@ -36,8 +37,8 @@ const Login = () => {
       return;
     }
 
-    const signIn = authenticateUser({ email, password, role });
-    if (!signIn.ok) {
+    const signIn = users.authenticate({ email, password, role });
+    if (signIn.ok === false) {
       toast({ title: "Sign In failed", description: signIn.error, variant: "destructive" });
       return;
     }
