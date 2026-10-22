@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import BottomNav from "@/components/BottomNav";
 import { useToast } from "@/hooks/use-toast";
-import { createEventRecord } from "@/data/appDatabase";
+import { useRepositories } from "@/repositories/RepositoryProvider";
 import { useAuth } from "@/contexts/AuthContext";
 import type { EventCategory } from "@/data/mockEvents";
 
@@ -22,6 +22,7 @@ const CreateEvent = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const { auth } = useAuth();
+  const { events } = useRepositories();
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [location, setLocation] = useState("");
@@ -44,7 +45,7 @@ const CreateEvent = () => {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      const createdEvent = createEventRecord({
+      const createdEvent = events.create({
         title,
         description,
         image: imagePreview ?? "https://images.unsplash.com/photo-1523580846011-d3a5bc25702b?auto=format&fit=crop&w=1200&q=80",

@@ -1,6 +1,6 @@
 import { ArrowLeft, BellRing, CalendarClock, MapPin } from "lucide-react";
 import { useNavigate } from "react-router-dom";
-import { listEventRecords } from "@/data/appDatabase";
+import { useRepositories } from "@/repositories/RepositoryProvider";
 import { useAuth } from "@/contexts/AuthContext";
 import { getReminderEvents, getReminderMapForUser, setReminderEnabled } from "@/data/checkInStore";
 import { useMemo, useState } from "react";
@@ -9,7 +9,8 @@ import { Switch } from "@/components/ui/switch";
 const EventReminders = () => {
   const navigate = useNavigate();
   const { auth } = useAuth();
-  const events = listEventRecords();
+  const { events: eventRepository } = useRepositories();
+  const events = eventRepository.list();
   const userId = auth.userId ?? "guest";
   const [reminderMap, setReminderMap] = useState(() => getReminderMapForUser(userId));
   const reminders = useMemo(() => getReminderEvents(events, userId).slice(0, 8), [events, userId, reminderMap]);

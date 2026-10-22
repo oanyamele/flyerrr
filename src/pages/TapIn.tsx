@@ -3,7 +3,7 @@ import { CheckCircle2, QrCode, ScanLine, Smartphone, Wifi } from "lucide-react";
 import { motion } from "framer-motion";
 import BottomNav from "@/components/BottomNav";
 import { useAuth } from "@/contexts/AuthContext";
-import { listEventRecords } from "@/data/appDatabase";
+import { useRepositories } from "@/repositories/RepositoryProvider";
 import { issueDynamicCheckInToken, secondsRemaining, validateCheckInToken } from "@/data/checkInStore";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
@@ -13,7 +13,8 @@ import CheckInQr from "@/components/CheckInQr";
 const TapIn = () => {
   const { auth } = useAuth();
   const { toast } = useToast();
-  const events = listEventRecords();
+  const { events: eventRepository } = useRepositories();
+  const events = eventRepository.list();
   const [selectedEventId, setSelectedEventId] = useState(events[0]?.id ?? "");
   const [scannedToken, setScannedToken] = useState("");
   const [confirmationText, setConfirmationText] = useState("");
