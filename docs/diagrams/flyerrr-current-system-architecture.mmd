@@ -1,0 +1,69 @@
+%% Flyerrr current-state component architecture, verified against the repository.
+flowchart LR
+    STUDENT(["Student"])
+    OFFICER(["Organization Officer / Admin"])
+
+    subgraph BROWSER["Client device - web browser"]
+        direction TB
+
+        subgraph SPA["Flyerrr single-page application - React 18 + Vite"]
+            direction TB
+
+            SHELL["Application shell<br/><b>App.tsx</b><br/>BrowserRouter | protected routes | providers<br/>TanStack Query provider - no queries implemented"]
+
+            subgraph ROUTES["Route / feature components"]
+                direction LR
+                STUDENT_UI["Student experience<br/>Feed | Explore | Event Detail<br/>RSVP | QR check-in | Saved | Profile"]
+                OFFICER_UI["Officer experience<br/>Create Event | Tap-In scanner<br/>Attendance Reports | Verification Queue"]
+            end
+
+            SHARED["Shared presentation components<br/>EventCard | BottomNav | CategoryFilter<br/>shadcn/ui + Radix primitives"]
+
+            CONTEXTS["Client state contexts<br/><b>AuthContext | FollowContext | ThemeContext</b>"]
+
+            DATA["Data-access modules<br/><b>appDatabase.ts</b> - users and events<br/><b>checkInStore.ts</b> - RSVPs, reminders, QR tokens<br/><b>attendanceStore.ts</b> - static reports and CSV"]
+
+            SEED["Static seed data<br/><b>mockEvents.ts</b><br/>events and organizations"]
+        end
+
+        LOCAL[("Browser localStorage<br/>flyer_db_v1<br/>flyer_rsvp_v1 | flyer_reminders_v1<br/>flyer_checkin_tokens_v1<br/>flyerrr_auth | flyerrr_follows | flyerrr_theme")]
+    end
+
+    MISSING["Backend boundary - not implemented<br/>No API service | no shared database<br/>no server-side authorization<br/>no cross-device persistence"]
+
+    STUDENT -->|"uses"| STUDENT_UI
+    OFFICER -->|"uses"| OFFICER_UI
+
+    SHELL -->|"routes and protects"| STUDENT_UI
+    SHELL -->|"routes and protects"| OFFICER_UI
+    STUDENT_UI -->|"renders"| SHARED
+    OFFICER_UI -->|"renders"| SHARED
+    STUDENT_UI -->|"reads client state"| CONTEXTS
+    OFFICER_UI -->|"reads client state"| CONTEXTS
+    STUDENT_UI -->|"calls directly"| DATA
+    OFFICER_UI -->|"calls directly"| DATA
+    SEED -->|"initializes"| DATA
+    CONTEXTS -->|"persists session/preferences"| LOCAL
+    DATA -->|"reads and writes JSON"| LOCAL
+    DATA -. "no HTTP/network path exists" .-> MISSING
+
+    classDef actor fill:#172554,stroke:#0f172a,color:#ffffff,stroke-width:2px;
+    classDef shell fill:#dbeafe,stroke:#2563eb,color:#172554,stroke-width:2px;
+    classDef feature fill:#eef2ff,stroke:#4f46e5,color:#1e1b4b,stroke-width:1.5px;
+    classDef component fill:#ecfeff,stroke:#0891b2,color:#164e63,stroke-width:1.5px;
+    classDef data fill:#f0fdf4,stroke:#16a34a,color:#14532d,stroke-width:1.5px;
+    classDef store fill:#fefce8,stroke:#ca8a04,color:#713f12,stroke-width:2px;
+    classDef missing fill:#fff1f2,stroke:#e11d48,color:#881337,stroke-width:2px,stroke-dasharray:6 4;
+
+    class STUDENT,OFFICER actor;
+    class SHELL shell;
+    class STUDENT_UI,OFFICER_UI feature;
+    class SHARED,CONTEXTS component;
+    class DATA,SEED data;
+    class LOCAL store;
+    class MISSING missing;
+
+    style BROWSER fill:#f8fafc,stroke:#475569,stroke-width:2px
+    style SPA fill:#ffffff,stroke:#94a3b8,stroke-width:2px
+    style ROUTES fill:#f8fafc,stroke:#cbd5e1,stroke-width:1px
+

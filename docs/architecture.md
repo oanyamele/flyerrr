@@ -1,5 +1,7 @@
 # flyerrr — System Architecture Baseline
 
+> **Rendered architecture diagram:** See [ARCHITECTURE_DIAGRAM.md](ARCHITECTURE_DIAGRAM.md) for the submission-ready component-and-data-flow view. The standalone PDF and PNG versions are generated from the same source so the diagram remains visible outside GitHub.
+
 > Generated for **Deliverable 1: Project Reset & Architecture Baseline**
 > Repository: `oanyamele/flyerrr` · Branch `main` @ `f0c475a` · Audited 2026-08-27
 > Diagrams are Mermaid and render natively on GitHub.
