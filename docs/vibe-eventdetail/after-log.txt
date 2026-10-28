@@ -1,0 +1,33 @@
+﻿AFTER the fix - branch nc/vibe-eventdetail, same steps (event 1, seed student, RSVP'd, QR dialog open).
+QR token sampled once per second (last 12 chars shown).
+
+18:52:07  Z3NpeGMifQ==  Refreshes in 20s
+18:52:08  Z3NpeGMifQ==  Refreshes in 19s
+...       (same token, countdown decreasing by 1 each second)
+18:52:26  Z3NpeGMifQ==  Refreshes in 1s
+18:52:27  aXdob3cifQ==  Refreshes in 20s   <- exactly one new token after 20 s
+18:52:28  aXdob3cifQ==  Refreshes in 20s
+
+Result: one token per 20 s; countdown works.
+
+Route change without reload: /event/1 -> /event/does-not-exist -> /event/2
+  "Event not found" shown: true | valid event renders again: true | console errors: none
+
+Build checks:
+  npx eslint src/pages/EventDetail.tsx -> 0 problems (was 2 errors)
+  npx eslint .                         -> 14 problems (3 errors, 11 warnings)  (was 16 / 5 errors; no new problems)
+  npx tsc -p tsconfig.app.json --noEmit -> 0 errors
+  npx vite build                       -> success; only the pre-existing >500 kB chunk warning (risk R-16)
+
+RE-VERIFIED after rebasing onto new main (cf6a1ec, includes PR #40 / CheckInQr component):
+  Conflict in the QR dialog resolved by keeping both changes: qrError alert, otherwise <CheckInQr/>.
+  QR token: 09:28:29-09:28:48 same token, countdown 20s -> 1s; 09:28:49 one new token. PASS
+  /event/1 -> /event/does-not-exist -> /event/2: "Event not found" shown, valid event renders, no console errors. PASS
+  npx eslint src/pages/EventDetail.tsx -> 0 problems (main's version: 2 errors)
+  npx eslint . -> 14 problems (3 errors, 11 warnings)  (main: 16 / 5 errors)
+  npx tsc -p tsconfig.app.json --noEmit -> 0 errors
+  npx vitest run -> 7/7 pass (needs NODE_OPTIONS=--no-experimental-webstorage on Node 25; see note)
+  npx vite build -> success; only the pre-existing >500 kB chunk warning (R-16)
+
+Note: on Node 22+/25, Node's built-in localStorage shadows jsdom's, so src/test/authService.test.ts
+fails with "localStorage.clear is not a function". Environment issue (project targets Node 20, risk R-12), not caused by this change.

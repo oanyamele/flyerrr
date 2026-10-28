@@ -1,0 +1,17 @@
+﻿BEFORE the fix - main @ 0e9b6b6, http://localhost:8080/event/1, logged in as seed student, RSVP'd, QR dialog open.
+QR token sampled once per second (last 12 chars shown). Expected: same token for 20 s, countdown decreasing.
+
+time      token          countdown
+18:49:21  M3M2bXkifQ==   Refreshes in 20s
+18:49:22  M2JhY2oifQ==   Refreshes in 20s
+18:49:23  bWlvMWwifQ==   Refreshes in 20s
+18:49:24  ampqZGwifQ==   Refreshes in 20s
+18:49:25  N3gzMHAifQ==   Refreshes in 20s
+18:49:26  OTEybmIifQ==   Refreshes in 20s
+18:49:27  N3BzbTYifQ==   Refreshes in 20s
+
+Result: 7 different tokens in 7 seconds; countdown frozen at 20s.
+
+ESLint baseline:
+  npx eslint src/pages/EventDetail.tsx -> 2 problems (2 errors): react-hooks/rules-of-hooks at 38:3 and 43:3
+  npx eslint .                         -> 16 problems (5 errors, 11 warnings)

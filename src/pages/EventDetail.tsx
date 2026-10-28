@@ -12,17 +12,62 @@ import { useAuth } from "@/contexts/AuthContext";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { isRsvped, issueDynamicCheckInToken, secondsRemaining, toggleRsvp } from "@/data/checkInStore";
 
+const QR_REFRESH_MS = 20_000;
+
+// Returns 0-100, or 0 when capacity is missing or invalid (avoids NaN/Infinity in the UI).
+const getAttendancePercent = (attendees: number, capacity: number) => {
+  if (!Number.isFinite(capacity) || capacity <= 0) return 0;
+  return Math.min(100, Math.max(0, Math.round((attendees / capacity) * 100)));
+};
+
 const EventDetail = () => {
-  const { id } = useParams();
+  const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const event = listEventRecords().find((e) => e.id === id);
+  // listEventRecords() re-parses localStorage, so `event` is a new object every render.
+  // Effects depend on the stable id instead, or they would re-run on every render.
+  const eventId = event?.id;
   const { auth } = useAuth();
   const [rsvp, setRsvp] = useState(false);
   const [qrOpen, setQrOpen] = useState(false);
   const [token, setToken] = useState("");
+  const [qrError, setQrError] = useState<string | null>(null);
   const [expiresAt, setExpiresAt] = useState(0);
-  const [tick, setTick] = useState(0);
+  const [, setTick] = useState(0); // forces a re-render each second so the countdown updates
   const { isFollowing, toggleFollow } = useFollow();
+
+  // Hooks must run before any early return (react-hooks/rules-of-hooks).
+  useEffect(() => {
+    if (!auth.userId || !eventId) return;
+    setRsvp(isRsvped(eventId, auth.userId));
+  }, [auth.userId, eventId]);
+
+  useEffect(() => {
+    if (!qrOpen || !auth.userId || !eventId) return;
+
+    const refreshToken = () => {
+      try {
+        const issued = issueDynamicCheckInToken(eventId, auth.userId);
+        setToken(issued.token);
+        setExpiresAt(issued.expiresAt);
+        setQrError(null);
+      } catch {
+        // localStorage can be full or blocked; show a message instead of a stale or blank code.
+        setToken("");
+        setExpiresAt(0);
+        setQrError("Couldn't generate a check-in code. Close this and try again.");
+      }
+    };
+
+    refreshToken();
+    const refreshInterval = window.setInterval(refreshToken, QR_REFRESH_MS);
+    const secondTick = window.setInterval(() => setTick((current) => current + 1), 1_000);
+
+    return () => {
+      window.clearInterval(refreshInterval);
+      window.clearInterval(secondTick);
+    };
+  }, [qrOpen, auth.userId, eventId]);
 
   if (!event) {
     return (
@@ -32,33 +77,8 @@ const EventDetail = () => {
     );
   }
 
-  const attendancePercent = Math.round((event.attendees / event.capacity) * 100);
+  const attendancePercent = getAttendancePercent(event.attendees, event.capacity);
   const countdown = secondsRemaining(expiresAt);
-  void tick;
-
-  useEffect(() => {
-    if (!auth.userId || !event) return;
-    setRsvp(isRsvped(event.id, auth.userId));
-  }, [auth.userId, event]);
-
-  useEffect(() => {
-    if (!qrOpen || !auth.userId || !event) return;
-
-    const refreshToken = () => {
-      const issued = issueDynamicCheckInToken(event.id, auth.userId);
-      setToken(issued.token);
-      setExpiresAt(issued.expiresAt);
-    };
-
-    refreshToken();
-    const refreshInterval = window.setInterval(refreshToken, 20_000);
-    const secondTick = window.setInterval(() => setTick((current) => current + 1), 1_000);
-
-    return () => {
-      window.clearInterval(refreshInterval);
-      window.clearInterval(secondTick);
-    };
-  }, [qrOpen, auth.userId, event]);
 
   return (
     <div className="min-h-screen bg-background pb-24">
@@ -219,7 +239,13 @@ const EventDetail = () => {
               This code refreshes every 20 seconds. Screenshots will not validate.
             </DialogDescription>
           </DialogHeader>
-          <CheckInQr token={token} eventTitle={event.title} countdown={countdown} />
+          {qrError ? (
+            <p role="alert" className="rounded-[8px] bg-destructive/10 px-3 py-2 text-xs text-destructive">
+              {qrError}
+            </p>
+          ) : (
+            <CheckInQr token={token} eventTitle={event.title} countdown={countdown} />
+          )}
         </DialogContent>
       </Dialog>
 
