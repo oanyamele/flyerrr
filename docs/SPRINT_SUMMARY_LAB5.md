@@ -23,7 +23,7 @@ The board contains 30 assigned issues: 6 Done, 3 In Progress, 21 Backlog. Six is
 | #9 Bun standardization | Brian-Two | PR #35 branch file inspection confirms one lockfile, README and Bun CI | Open PR; integration and fresh frozen install/CI remain |
 | #13 relational schema | Brian-Two | Schema design in PR #36 | Four-member sign-off, review and integration |
 | #33 backend ADR | Brian-Two | Decision document in PR #37 | Four-member agreement and integration |
-| #5 board hygiene | Brian-Two | 30 real assigned issues; 5 new planning/traceability fields | #43 has no estimate/milestone; a formal governance re-audit remains |
+| #5 board hygiene | Brian-Two | 30 real assigned issues; 6 new planning/traceability fields | #43 has no estimate/milestone; a formal governance re-audit remains |
 
 The remaining 24 items are incomplete: three in progress (#16, #28, #29), 21 in backlog. PR #39 is auth planning only. PR #38 is a partial Explore implementation and is open with conflicts. No bookmarks, server auth, attendance or backend deployment is claimed complete.
 
