@@ -1,6 +1,6 @@
 # Flyerrr - Requirements Traceability Matrix
 
-Lab 5 sprint execution review. Snapshot: November 01, 2026, 11:03 PM ET.
+Lab 5 sprint execution review. Snapshot: November 01, 2026, 11:17 PM ET.
 
 - [GitHub Project Board](https://github.com/users/oanyamele/projects/1)
 - [Sprint Summary](SPRINT_SUMMARY_LAB5.md)
@@ -8,9 +8,25 @@ Lab 5 sprint execution review. Snapshot: November 01, 2026, 11:03 PM ET.
 
 ## Scope and status rules
 
-No existing team RTM was found in the repository or connected Drive. This new issue-based RTM derives each `L5-REQ-NNN` requirement from the corresponding GitHub issue's acceptance criteria. It does not replace or renumber the product features in `docs/backlog.csv`; those feature IDs and the board's F1-F6 workstreams use different namespaces. Acceptance criteria below preserve the source wording at capture time, without copying checkbox completion claims.
+The updated copy of the team's [Flyerrr RTM workbook](https://docs.google.com/spreadsheets/d/1LuHvkuE1HYGgNPqkwPkx7UWVkCCgAvEPifiz2LQhWZs/edit?usp=drivesdk) is the primary RTM. Its nine original user stories (`US-01` through `US-09`), 22 product feature IDs and existing mappings are preserved. The updated copy includes implementation/evidence columns and a `Lab 5 Sprint` traceability tab. This repository document provides detailed acceptance evidence for that same backlog. Supplemental `L5-REQ-NNN` identifiers derive from issue acceptance criteria and do not replace the team's user stories. Board F1-F6 workstreams and product feature IDs use separate namespaces.
+
+Ticket state is the primary completion record: six issues are closed/Done, three In Progress and 21 Backlog. PR integration and remaining acceptance evidence are recorded separately. Existing forward/reverse mapping inconsistencies, including the undefined Feature ID List row 10 versus reverse F7 Geofence Validation, are retained and flagged for the team. Technical mappings in the sprint tab indicate affected/supporting requirements, not full story completion.
 
 The board's existing Done statuses are preserved. An issue marked Done is not automatically treated as merged or fully accepted: implementation, integration, verification and outstanding approvals are recorded separately. Dependencies added for this review describe technical sequencing and are not evidence of a team planning meeting. Existing milestone names are preserved; no historical sprint dates or commitments are invented.
+
+## Team user-story status
+
+| Requirement | Status | Tickets | Evidence / remaining work |
+|---|---|---|---|
+| US-01 - Browse Event Feed | Partial | #17, #21, #31, #43 | Merged accessibility PR #40; repository PR #42 and Explore PR #38 are open. Live query migration #17 and officer-created Explore search #21 are incomplete. |
+| US-02 - View Event Details | Partial | #7, #21, #31, #43 | Detail UI and merged accessibility changes exist; repository slice passes branch tests. Server-side bookmarks #21 and complete detail/page acceptance remain. |
+| US-03 - NFC Tap-In Check-In | Not implemented | #16, #18, #19, #32 | NFC remains simulated; no real Web NFC implementation is evidenced. Choose/remove NFC simulation #32; implement trusted auth/token/attendance loop #16/#18/#19. |
+| US-04 - QR Code Backup Check-In | Partial prototype | #16, #18, #19, #31 | Merged QR token alternative improves accessibility; no trusted server-issued QR flow verified. Secure single-use tokens #18, persisted attendance #19 and actual QR scanning acceptance. |
+| US-05 - Saved Events Reminder | Incomplete | #16, #21 | Reminder UI exists; no persisted per-user bookmark/reminder service completion evidenced. Server-side saved events #21 and notification delivery acceptance. |
+| US-06 - Create & Publish an Event | Partial prototype | #13, #14, #17, #29, #43 | Local event creation/persistence verified by PR #42 tests; branch remains open. API #14, query publishing #17, form validation #29 and team schema acceptance. |
+| US-07 - Real-Time Attendance Dashboard | Incomplete | #18, #19, #20, #24 | Existing reporting UI is not proof of live attendance data. Trusted check-in #18/#19 and live reporting/derived outputs #20; E2E #24. |
+| US-08 - Verify Organization Account / Login | Partial prototype | #14, #16, #22, #29, #43 | Local account/repository tests pass; PR #39 is auth planning only. Server auth/roles #16, persisted verification #22 and API #14. |
+| US-09 - Export Attendance Report | Partial prototype | #19, #20, #23 | CSV/report code exists; current live-attendance export acceptance is not established. Persist attendance #19, wire reports/CSV to live data #20 and verify escaping/data tests #23. |
 
 ## Traceability index
 
@@ -51,6 +67,9 @@ The board's existing Done statuses are preserved. An issue marked Done is not au
 
 ### L5-REQ-005
 
+**Team RTM mapping:** Cross-cutting support; no new functional story inferred. Product features: cross-cutting support.  
+**Primary RTM:** https://docs.google.com/spreadsheets/d/1LuHvkuE1HYGgNPqkwPkx7UWVkCCgAvEPifiz2LQhWZs/edit?usp=drivesdk
+
 **Backlog:** [#5: F4.1 - Convert all draft board items to real GitHub Issues](https://github.com/oanyamele/flyerrr/issues/5)  
 **Owner:** Brian-Two  
 **Priority / estimate / milestone:** P1-high / 3 / Sprint 0 — Foundation  
@@ -67,6 +86,9 @@ The board's existing Done statuses are preserved. An issue marked Done is not au
 **Completion / remaining evidence:** 30 real, assigned issues; Priority/Estimate/Sprint/Dependencies/RTM fields added. #43 remains unestimated and has no milestone. No new 40/50 governance re-audit claimed.
 
 ### L5-REQ-006
+
+**Team RTM mapping:** Cross-cutting support; no new functional story inferred. Product features: cross-cutting support.  
+**Primary RTM:** https://docs.google.com/spreadsheets/d/1LuHvkuE1HYGgNPqkwPkx7UWVkCCgAvEPifiz2LQhWZs/edit?usp=drivesdk
 
 **Backlog:** [#6: F3.1 - Add CI workflow: typecheck, lint, test, build on every PR](https://github.com/oanyamele/flyerrr/issues/6)  
 **Owner:** oanyamele  
@@ -85,6 +107,9 @@ The board's existing Done statuses are preserved. An issue marked Done is not au
 
 ### L5-REQ-007
 
+**Team RTM mapping:** US-02, US-03, US-04, US-05. Product features: F3.  
+**Primary RTM:** https://docs.google.com/spreadsheets/d/1LuHvkuE1HYGgNPqkwPkx7UWVkCCgAvEPifiz2LQhWZs/edit?usp=drivesdk
+
 **Backlog:** [#7: F5.1 - Fix conditional React hooks in EventDetail.tsx](https://github.com/oanyamele/flyerrr/issues/7)  
 **Owner:** neaylasimone  
 **Priority / estimate / milestone:** P1-high / 1 / Sprint 0 — Foundation  
@@ -101,6 +126,9 @@ The board's existing Done statuses are preserved. An issue marked Done is not au
 
 ### L5-REQ-008
 
+**Team RTM mapping:** Cross-cutting support; no new functional story inferred. Product features: cross-cutting support.  
+**Primary RTM:** https://docs.google.com/spreadsheets/d/1LuHvkuE1HYGgNPqkwPkx7UWVkCCgAvEPifiz2LQhWZs/edit?usp=drivesdk
+
 **Backlog:** [#8: F4.3 - Add .nvmrc, engines field, and a real README](https://github.com/oanyamele/flyerrr/issues/8)  
 **Owner:** nadcaesar  
 **Priority / estimate / milestone:** P1-high / 1 / Sprint 0 — Foundation  
@@ -116,6 +144,9 @@ The board's existing Done statuses are preserved. An issue marked Done is not au
 **Completion / remaining evidence:** No completed acceptance evidence recorded for this item at this snapshot.
 
 ### L5-REQ-009
+
+**Team RTM mapping:** Cross-cutting support; no new functional story inferred. Product features: cross-cutting support.  
+**Primary RTM:** https://docs.google.com/spreadsheets/d/1LuHvkuE1HYGgNPqkwPkx7UWVkCCgAvEPifiz2LQhWZs/edit?usp=drivesdk
 
 **Backlog:** [#9: F4.4 - Standardize on one package manager; delete competing lockfiles](https://github.com/oanyamele/flyerrr/issues/9)  
 **Owner:** Brian-Two  
@@ -135,6 +166,9 @@ The board's existing Done statuses are preserved. An issue marked Done is not au
 
 ### L5-REQ-010
 
+**Team RTM mapping:** Cross-cutting support; no new functional story inferred. Product features: cross-cutting support.  
+**Primary RTM:** https://docs.google.com/spreadsheets/d/1LuHvkuE1HYGgNPqkwPkx7UWVkCCgAvEPifiz2LQhWZs/edit?usp=drivesdk
+
 **Backlog:** [#10: F3.2 - Resolve 11 dependency vulnerabilities and restore Playwright](https://github.com/oanyamele/flyerrr/issues/10)  
 **Owner:** oanyamele  
 **Priority / estimate / milestone:** P1-high / 1 / Sprint 0 — Foundation  
@@ -149,6 +183,9 @@ The board's existing Done statuses are preserved. An issue marked Done is not au
 **Completion / remaining evidence:** No completed acceptance evidence recorded for this item at this snapshot.
 
 ### L5-REQ-011
+
+**Team RTM mapping:** Cross-cutting support; no new functional story inferred. Product features: cross-cutting support.  
+**Primary RTM:** https://docs.google.com/spreadsheets/d/1LuHvkuE1HYGgNPqkwPkx7UWVkCCgAvEPifiz2LQhWZs/edit?usp=drivesdk
 
 **Backlog:** [#11: F4.2 - Enable branch protection on main](https://github.com/oanyamele/flyerrr/issues/11)  
 **Owner:** neaylasimone  
@@ -166,6 +203,9 @@ The board's existing Done statuses are preserved. An issue marked Done is not au
 
 ### L5-REQ-012
 
+**Team RTM mapping:** Cross-cutting support; no new functional story inferred. Product features: cross-cutting support.  
+**Primary RTM:** https://docs.google.com/spreadsheets/d/1LuHvkuE1HYGgNPqkwPkx7UWVkCCgAvEPifiz2LQhWZs/edit?usp=drivesdk
+
 **Backlog:** [#12: F5.2 - Remove dead code: 3 unreferenced components and 33 unused UI files](https://github.com/oanyamele/flyerrr/issues/12)  
 **Owner:** nadcaesar  
 **Priority / estimate / milestone:** P2-cleanup / 1 / Sprint 0 — Foundation  
@@ -181,6 +221,9 @@ The board's existing Done statuses are preserved. An issue marked Done is not au
 **Completion / remaining evidence:** No completed acceptance evidence recorded for this item at this snapshot.
 
 ### L5-REQ-013
+
+**Team RTM mapping:** US-01, US-02, US-03, US-04, US-05, US-06, US-07, US-08, US-09. Product features: F19, F21.  
+**Primary RTM:** https://docs.google.com/spreadsheets/d/1LuHvkuE1HYGgNPqkwPkx7UWVkCCgAvEPifiz2LQhWZs/edit?usp=drivesdk
 
 **Backlog:** [#13: F1.2 - Design the relational schema with ISO timestamps](https://github.com/oanyamele/flyerrr/issues/13)  
 **Owner:** Brian-Two  
@@ -201,6 +244,9 @@ The board's existing Done statuses are preserved. An issue marked Done is not au
 
 ### L5-REQ-014
 
+**Team RTM mapping:** US-01, US-02, US-03, US-04, US-05, US-06, US-07, US-08, US-09. Product features: F19, F21.  
+**Primary RTM:** https://docs.google.com/spreadsheets/d/1LuHvkuE1HYGgNPqkwPkx7UWVkCCgAvEPifiz2LQhWZs/edit?usp=drivesdk
+
 **Backlog:** [#14: F1.3 - Stand up API service and Postgres with a staging environment](https://github.com/oanyamele/flyerrr/issues/14)  
 **Owner:** oanyamele  
 **Priority / estimate / milestone:** P0-blocking / 8 / Sprint 1 — Backend & Seam  
@@ -218,6 +264,9 @@ The board's existing Done statuses are preserved. An issue marked Done is not au
 **Completion / remaining evidence:** No completed acceptance evidence recorded for this item at this snapshot.
 
 ### L5-REQ-015
+
+**Team RTM mapping:** US-01, US-02, US-03, US-04, US-05, US-06, US-07, US-08, US-09. Product features: F1, F3, F11, F19, F21.  
+**Primary RTM:** https://docs.google.com/spreadsheets/d/1LuHvkuE1HYGgNPqkwPkx7UWVkCCgAvEPifiz2LQhWZs/edit?usp=drivesdk
 
 **Backlog:** [#15: F1.4 - Introduce a repository interface between pages and storage](https://github.com/oanyamele/flyerrr/issues/15)  
 **Owner:** neaylasimone  
@@ -237,6 +286,9 @@ The board's existing Done statuses are preserved. An issue marked Done is not au
 - [PR #42](https://github.com/oanyamele/flyerrr/pull/42), owner `Brian-Two`, head `085f4c5ac0293cbda93b2b699b44ba92828f62bf`, open / unmerged at snapshot.
 
 ### L5-REQ-016
+
+**Team RTM mapping:** US-03, US-04, US-05, US-06, US-07, US-08, US-09. Product features: F19.  
+**Primary RTM:** https://docs.google.com/spreadsheets/d/1LuHvkuE1HYGgNPqkwPkx7UWVkCCgAvEPifiz2LQhWZs/edit?usp=drivesdk
 
 **Backlog:** [#16: F1.5 - Move authentication server-side with hashed passwords](https://github.com/oanyamele/flyerrr/issues/16)  
 **Owner:** nadcaesar  
@@ -258,6 +310,9 @@ The board's existing Done statuses are preserved. An issue marked Done is not au
 
 ### L5-REQ-017
 
+**Team RTM mapping:** US-01, US-06. Product features: F1, F14.  
+**Primary RTM:** https://docs.google.com/spreadsheets/d/1LuHvkuE1HYGgNPqkwPkx7UWVkCCgAvEPifiz2LQhWZs/edit?usp=drivesdk
+
 **Backlog:** [#17: F1.6 - Migrate the events feed to TanStack Query behind the repository](https://github.com/oanyamele/flyerrr/issues/17)  
 **Owner:** Brian-Two  
 **Priority / estimate / milestone:** P1-high / 5 / Sprint 1 — Backend & Seam  
@@ -274,6 +329,9 @@ The board's existing Done statuses are preserved. An issue marked Done is not au
 **Completion / remaining evidence:** No completed acceptance evidence recorded for this item at this snapshot.
 
 ### L5-REQ-018
+
+**Team RTM mapping:** US-03, US-04, US-07. Product features: F8, F9, F19, F21.  
+**Primary RTM:** https://docs.google.com/spreadsheets/d/1LuHvkuE1HYGgNPqkwPkx7UWVkCCgAvEPifiz2LQhWZs/edit?usp=drivesdk
 
 **Backlog:** [#18: F2.1 - Server-issued, HMAC-signed, single-use check-in tokens](https://github.com/oanyamele/flyerrr/issues/18)  
 **Owner:** oanyamele  
@@ -292,6 +350,9 @@ The board's existing Done statuses are preserved. An issue marked Done is not au
 
 ### L5-REQ-019
 
+**Team RTM mapping:** US-03, US-04, US-07, US-09. Product features: F8, F15, F21.  
+**Primary RTM:** https://docs.google.com/spreadsheets/d/1LuHvkuE1HYGgNPqkwPkx7UWVkCCgAvEPifiz2LQhWZs/edit?usp=drivesdk
+
 **Backlog:** [#19: F2.2 - Persist an AttendanceRecord on every validated check-in](https://github.com/oanyamele/flyerrr/issues/19)  
 **Owner:** neaylasimone  
 **Priority / estimate / milestone:** P0-blocking / 5 / Sprint 2 — Core Loop  
@@ -308,6 +369,9 @@ The board's existing Done statuses are preserved. An issue marked Done is not au
 **Completion / remaining evidence:** No completed acceptance evidence recorded for this item at this snapshot.
 
 ### L5-REQ-020
+
+**Team RTM mapping:** US-07, US-09. Product features: F15, F20, F21.  
+**Primary RTM:** https://docs.google.com/spreadsheets/d/1LuHvkuE1HYGgNPqkwPkx7UWVkCCgAvEPifiz2LQhWZs/edit?usp=drivesdk
 
 **Backlog:** [#20: F2.3 - Rewire Reports, History, Rewards, and Resume Builder to live data](https://github.com/oanyamele/flyerrr/issues/20)  
 **Owner:** nadcaesar  
@@ -328,6 +392,9 @@ The board's existing Done statuses are preserved. An issue marked Done is not au
 
 ### L5-REQ-021
 
+**Team RTM mapping:** US-01, US-02, US-05. Product features: F1, F4.  
+**Primary RTM:** https://docs.google.com/spreadsheets/d/1LuHvkuE1HYGgNPqkwPkx7UWVkCCgAvEPifiz2LQhWZs/edit?usp=drivesdk
+
 **Backlog:** [#21: F2.4 - Persist saves/bookmarks and point Explore at the database](https://github.com/oanyamele/flyerrr/issues/21)  
 **Owner:** Brian-Two  
 **Priority / estimate / milestone:** P1-high / 3 / Sprint 2 — Core Loop  
@@ -347,6 +414,9 @@ The board's existing Done statuses are preserved. An issue marked Done is not au
 
 ### L5-REQ-022
 
+**Team RTM mapping:** US-08. Product features: F17, F18, F19.  
+**Primary RTM:** https://docs.google.com/spreadsheets/d/1LuHvkuE1HYGgNPqkwPkx7UWVkCCgAvEPifiz2LQhWZs/edit?usp=drivesdk
+
 **Backlog:** [#22: F2.5 - Persist organization verification decisions](https://github.com/oanyamele/flyerrr/issues/22)  
 **Owner:** oanyamele  
 **Priority / estimate / milestone:** P1-high / 2 / Sprint 2 — Core Loop  
@@ -363,6 +433,9 @@ The board's existing Done statuses are preserved. An issue marked Done is not au
 **Completion / remaining evidence:** No completed acceptance evidence recorded for this item at this snapshot.
 
 ### L5-REQ-023
+
+**Team RTM mapping:** US-03, US-04, US-07, US-09. Product features: F8, F9, F20, F21.  
+**Primary RTM:** https://docs.google.com/spreadsheets/d/1LuHvkuE1HYGgNPqkwPkx7UWVkCCgAvEPifiz2LQhWZs/edit?usp=drivesdk
 
 **Backlog:** [#23: F3.3 - Unit-test the data layer to >= 60% coverage](https://github.com/oanyamele/flyerrr/issues/23)  
 **Owner:** neaylasimone  
@@ -382,6 +455,9 @@ The board's existing Done statuses are preserved. An issue marked Done is not au
 
 ### L5-REQ-024
 
+**Team RTM mapping:** US-03, US-04, US-07. Product features: F8, F9, F15, F21.  
+**Primary RTM:** https://docs.google.com/spreadsheets/d/1LuHvkuE1HYGgNPqkwPkx7UWVkCCgAvEPifiz2LQhWZs/edit?usp=drivesdk
+
 **Backlog:** [#24: F3.4 - E2E: login through check-in through points awarded](https://github.com/oanyamele/flyerrr/issues/24)  
 **Owner:** nadcaesar  
 **Priority / estimate / milestone:** P1-high / 5 / Sprint 3 — Hardening  
@@ -400,6 +476,9 @@ The board's existing Done statuses are preserved. An issue marked Done is not au
 
 ### L5-REQ-025
 
+**Team RTM mapping:** Cross-cutting support; no new functional story inferred. Product features: cross-cutting support.  
+**Primary RTM:** https://docs.google.com/spreadsheets/d/1LuHvkuE1HYGgNPqkwPkx7UWVkCCgAvEPifiz2LQhWZs/edit?usp=drivesdk
+
 **Backlog:** [#25: F3.5 - Enable TypeScript strict mode and strictNullChecks](https://github.com/oanyamele/flyerrr/issues/25)  
 **Owner:** Brian-Two  
 **Priority / estimate / milestone:** P2-cleanup / 5 / Sprint 3 — Hardening  
@@ -416,6 +495,9 @@ The board's existing Done statuses are preserved. An issue marked Done is not au
 **Completion / remaining evidence:** No completed acceptance evidence recorded for this item at this snapshot.
 
 ### L5-REQ-026
+
+**Team RTM mapping:** Cross-cutting support; no new functional story inferred. Product features: cross-cutting support.  
+**Primary RTM:** https://docs.google.com/spreadsheets/d/1LuHvkuE1HYGgNPqkwPkx7UWVkCCgAvEPifiz2LQhWZs/edit?usp=drivesdk
 
 **Backlog:** [#26: F5.3 - Route-level code splitting to get initial JS under 250 KB](https://github.com/oanyamele/flyerrr/issues/26)  
 **Owner:** oanyamele  
@@ -434,6 +516,9 @@ The board's existing Done statuses are preserved. An issue marked Done is not au
 
 ### L5-REQ-027
 
+**Team RTM mapping:** Cross-cutting support; no new functional story inferred. Product features: cross-cutting support.  
+**Primary RTM:** https://docs.google.com/spreadsheets/d/1LuHvkuE1HYGgNPqkwPkx7UWVkCCgAvEPifiz2LQhWZs/edit?usp=drivesdk
+
 **Backlog:** [#27: F4.5 - Remove lovable-tagger and hold a data-layer code-reading session](https://github.com/oanyamele/flyerrr/issues/27)  
 **Owner:** neaylasimone  
 **Priority / estimate / milestone:** P2-cleanup / 2 / Sprint 3 — Hardening  
@@ -451,6 +536,9 @@ The board's existing Done statuses are preserved. An issue marked Done is not au
 
 ### L5-REQ-028
 
+**Team RTM mapping:** Cross-cutting support; no new functional story inferred. Product features: cross-cutting support.  
+**Primary RTM:** https://docs.google.com/spreadsheets/d/1LuHvkuE1HYGgNPqkwPkx7UWVkCCgAvEPifiz2LQhWZs/edit?usp=drivesdk
+
 **Backlog:** [#28: F5.4 - Unify localStorage key naming and add schema versioning](https://github.com/oanyamele/flyerrr/issues/28)  
 **Owner:** nadcaesar  
 **Priority / estimate / milestone:** P2-cleanup / 2 / Sprint 3 — Hardening  
@@ -466,6 +554,9 @@ The board's existing Done statuses are preserved. An issue marked Done is not au
 **Completion / remaining evidence:** No completed acceptance evidence recorded for this item at this snapshot.
 
 ### L5-REQ-029
+
+**Team RTM mapping:** US-06, US-08. Product features: F11, F19.  
+**Primary RTM:** https://docs.google.com/spreadsheets/d/1LuHvkuE1HYGgNPqkwPkx7UWVkCCgAvEPifiz2LQhWZs/edit?usp=drivesdk
 
 **Backlog:** [#29: F5.5 - Adopt react-hook-form and zod validation on all forms](https://github.com/oanyamele/flyerrr/issues/29)  
 **Owner:** Brian-Two  
@@ -485,6 +576,9 @@ The board's existing Done statuses are preserved. An issue marked Done is not au
 
 ### L5-REQ-030
 
+**Team RTM mapping:** Cross-cutting support; no new functional story inferred. Product features: cross-cutting support.  
+**Primary RTM:** https://docs.google.com/spreadsheets/d/1LuHvkuE1HYGgNPqkwPkx7UWVkCCgAvEPifiz2LQhWZs/edit?usp=drivesdk
+
 **Backlog:** [#30: F6.1 - Add empty, loading, and error states across all screens](https://github.com/oanyamele/flyerrr/issues/30)  
 **Owner:** oanyamele  
 **Priority / estimate / milestone:** P2-cleanup / 3 / Sprint 3 — Hardening  
@@ -500,6 +594,9 @@ The board's existing Done statuses are preserved. An issue marked Done is not au
 **Completion / remaining evidence:** No completed acceptance evidence recorded for this item at this snapshot.
 
 ### L5-REQ-031
+
+**Team RTM mapping:** US-01, US-02, US-04. Product features: F1, F2, F3, F9.  
+**Primary RTM:** https://docs.google.com/spreadsheets/d/1LuHvkuE1HYGgNPqkwPkx7UWVkCCgAvEPifiz2LQhWZs/edit?usp=drivesdk
 
 **Backlog:** [#31: F6.2 - Accessibility pass: keyboard navigation, labels, contrast](https://github.com/oanyamele/flyerrr/issues/31)  
 **Owner:** neaylasimone  
@@ -522,6 +619,9 @@ The board's existing Done statuses are preserved. An issue marked Done is not au
 
 ### L5-REQ-032
 
+**Team RTM mapping:** US-03, US-04. Product features: F6, F9.  
+**Primary RTM:** https://docs.google.com/spreadsheets/d/1LuHvkuE1HYGgNPqkwPkx7UWVkCCgAvEPifiz2LQhWZs/edit?usp=drivesdk
+
 **Backlog:** [#32: F6.3 - Replace the simulated NFC button or scope real Web NFC](https://github.com/oanyamele/flyerrr/issues/32)  
 **Owner:** nadcaesar  
 **Priority / estimate / milestone:** P2-cleanup / 2 / Sprint 3 — Hardening  
@@ -537,6 +637,9 @@ The board's existing Done statuses are preserved. An issue marked Done is not au
 **Completion / remaining evidence:** No completed acceptance evidence recorded for this item at this snapshot.
 
 ### L5-REQ-033
+
+**Team RTM mapping:** Cross-cutting support; no new functional story inferred. Product features: cross-cutting support.  
+**Primary RTM:** https://docs.google.com/spreadsheets/d/1LuHvkuE1HYGgNPqkwPkx7UWVkCCgAvEPifiz2LQhWZs/edit?usp=drivesdk
 
 **Backlog:** [#33: F1.1 - Document the architecture decision record for the backend stack](https://github.com/oanyamele/flyerrr/issues/33)  
 **Owner:** Brian-Two  
@@ -555,6 +658,9 @@ The board's existing Done statuses are preserved. An issue marked Done is not au
 - [PR #37](https://github.com/oanyamele/flyerrr/pull/37), owner `Brian-Two`, head `c4efdb7781bec5339bbdcce127dbb08f76fad360`, open / unmerged at snapshot.
 
 ### L5-REQ-043
+
+**Team RTM mapping:** US-01, US-02, US-06, US-08. Product features: F1, F3, F11, F14, F19, F21.  
+**Primary RTM:** https://docs.google.com/spreadsheets/d/1LuHvkuE1HYGgNPqkwPkx7UWVkCCgAvEPifiz2LQhWZs/edit?usp=drivesdk
 
 **Backlog:** [#43: Lab 3 - Extract user and event use cases behind a repository seam](https://github.com/oanyamele/flyerrr/issues/43)  
 **Owner:** Brian-Two  
@@ -575,3 +681,11 @@ The board's existing Done statuses are preserved. An issue marked Done is not au
 - [PR #42](https://github.com/oanyamele/flyerrr/pull/42), owner `Brian-Two`, head `085f4c5ac0293cbda93b2b699b44ba92828f62bf`, open / unmerged at snapshot.
 
 **Fresh validation at PR head:** `vitest run` 3 files / 12 tests passed; `tsc -p tsconfig.app.json --noEmit` passed; `vite build` passed. Five repository tests exercise page import boundaries, normalized login and wrong-role rejection, duplicate-account persistence, event ordering/capacity, and in-memory isolation. One of the 12 tests is the pre-existing tautological example and is not feature evidence. Manual UI checks are reported by the PR author, not rerun for this review.
+
+## Original RTM and updated copy
+
+Original source: https://docs.google.com/spreadsheets/d/1R46xUUIlGTvZZjpBeDJd1nPUQdMPm2I9/edit
+
+Updated submission copy: https://docs.google.com/spreadsheets/d/1LuHvkuE1HYGgNPqkwPkx7UWVkCCgAvEPifiz2LQhWZs/edit?usp=drivesdk
+
+Drive rejected the in-place update with insufficient file permissions. The original shared workbook remains unchanged; the user authorized creation of the updated copy. All original cell values and feature mappings were preserved.
