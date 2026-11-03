@@ -23,4 +23,17 @@ export default tseslint.config(
       "@typescript-eslint/no-unused-vars": "off",
     },
   },
+  {
+    // All browser storage goes through src/lib/storage.ts. appDatabase.ts is exempt
+    // for now because lab/introduce-repository-seam is restructuring that file.
+    files: ["src/**/*.{ts,tsx}"],
+    ignores: ["src/lib/storage.ts", "src/data/appDatabase.ts", "src/test/**", "src/**/*.test.{ts,tsx}"],
+    rules: {
+      "no-restricted-globals": ["error", { name: "localStorage", message: "Use src/lib/storage.ts instead." }],
+      "no-restricted-properties": [
+        "error",
+        { object: "window", property: "localStorage", message: "Use src/lib/storage.ts instead." },
+      ],
+    },
+  },
 );

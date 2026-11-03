@@ -1,5 +1,6 @@
 import { attendanceRecords, type AttendanceRecord } from "@/data/attendanceStore";
 import { mockEvents, mockOrgs, type CampusEvent, type EventCategory, type OrgProfile } from "@/data/mockEvents";
+import { STORAGE_KEYS } from "@/lib/storage";
 
 export type UserRole = "student" | "org_officer";
 
@@ -45,7 +46,7 @@ export interface AppDatabase {
   metadata: DatabaseMetadata;
 }
 
-const DB_KEY = "flyer_db_v1";
+const DB_KEY = STORAGE_KEYS.database;
 
 const nowIso = () => new Date().toISOString();
 
