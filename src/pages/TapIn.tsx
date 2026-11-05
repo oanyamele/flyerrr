@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { CheckCircle2, QrCode, ScanLine, Smartphone, Wifi } from "lucide-react";
+import { CalendarX, CheckCircle2, QrCode, ScanLine, Smartphone, Wifi } from "lucide-react";
 import { motion } from "framer-motion";
 import BottomNav from "@/components/BottomNav";
 import { useAuth } from "@/contexts/AuthContext";
@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import CheckInQr from "@/components/CheckInQr";
+import { EmptyState } from "@/components/states/DataStates";
 
 const TapIn = () => {
   const { auth } = useAuth();
@@ -71,7 +72,7 @@ const TapIn = () => {
               {auth.role === "org_officer" ? "Scan and validate attendance quickly" : "Check in to events instantly"}
             </p>
           </div>
-          {auth.role === "student" && (
+          {auth.role === "student" && events.length > 0 && (
             <button
               onClick={() => setQrOpen(true)}
               className="flex h-10 w-10 items-center justify-center rounded-full border border-border bg-card"
@@ -85,7 +86,14 @@ const TapIn = () => {
       </header>
 
       <div className="flex-1 flex flex-col items-center justify-center px-8">
-        {auth.role === "student" ? (
+        {events.length === 0 ? (
+          <EmptyState
+            icon={CalendarX}
+            title="No events to check in to"
+            description="Events will appear here once they're available."
+            className="w-full max-w-sm"
+          />
+        ) : auth.role === "student" ? (
           <>
             <motion.div
               className="relative w-48 h-48 mb-8"

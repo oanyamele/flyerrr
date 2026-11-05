@@ -1,5 +1,6 @@
-import { useEffect, useState } from "react";
-import { Bell, Moon, Plus, Send, Sun } from "lucide-react";
+import { useState } from "react";
+import { Bell, CalendarDays, Moon, Plus, Send, Sun } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import CategoryFilter from "@/components/CategoryFilter";
 import EventCard from "@/components/EventCard";
 import WeeklyDigest from "@/components/WeeklyDigest";
@@ -9,7 +10,9 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useFollow } from "@/contexts/FollowContext";
 import { useTheme } from "@/contexts/ThemeContext";
 import { useLocation, useNavigate } from "react-router-dom";
-import { listEventRecords } from "@/data/appDatabase";
+import { fetchEvents } from "@/data/repository";
+import { useAsyncData } from "@/hooks/useAsyncData";
+import { EmptyState, ErrorState, EventCardSkeleton } from "@/components/states/DataStates";
 
 const Index = () => {
   const [activeCategory, setActiveCategory] = useState<EventCategory | "all" | "following">("all");
@@ -18,11 +21,8 @@ const Index = () => {
   const { theme, toggleTheme } = useTheme();
   const navigate = useNavigate();
   const location = useLocation();
-  const [events, setEvents] = useState(() => listEventRecords());
-
-  useEffect(() => {
-    setEvents(listEventRecords());
-  }, [location.key]);
+  const query = useAsyncData(fetchEvents, [location.key]);
+  const events = query.status === "success" ? query.data : [];
 
   const filtered =
     activeCategory === "following"
@@ -75,18 +75,42 @@ const Index = () => {
 
       <WeeklyDigest />
 
-      <div className="mx-auto max-w-3xl snap-y snap-mandatory pt-2 sm:pt-3">
-        {filtered.map((event) => (
-          <EventCard key={event.id} event={event} />
-        ))}
-      </div>
+      {query.status === "loading" && <EventCardSkeleton count={3} />}
 
-      {filtered.length === 0 && (
-        <div className="flex flex-col items-center justify-center py-20 text-muted-foreground">
-          <p className="text-lg font-semibold">No events found</p>
-          <p className="text-sm">
-            {activeCategory === "following" ? "Follow organizations to see their events here" : "Try a different category"}
-          </p>
+      {query.status === "error" && (
+        <div className="px-5 pt-4">
+          <ErrorState description="We couldn't load the events feed." onRetry={query.retry} />
+        </div>
+      )}
+
+      {query.status === "success" && (
+        <div className="mx-auto max-w-3xl snap-y snap-mandatory pt-2 sm:pt-3">
+          {filtered.map((event) => (
+            <EventCard key={event.id} event={event} />
+          ))}
+        </div>
+      )}
+
+      {query.status === "success" && filtered.length === 0 && (
+        <div className="px-5 pt-4">
+          {activeCategory === "following" ? (
+            <EmptyState
+              icon={CalendarDays}
+              title={followedOrgIds.length === 0 ? "You haven't followed any clubs yet." : "No events from your organizations"}
+              description={followedOrgIds.length === 0 ? "Follow clubs on Explore to see their events here." : "The clubs you follow haven't posted any events yet."}
+              action={
+                <Button onClick={() => navigate("/explore")} className="rounded-xl">
+                  Explore organizations
+                </Button>
+              }
+            />
+          ) : (
+            <EmptyState
+              icon={CalendarDays}
+              title={events.length === 0 ? "No events available yet." : "No events in this category"}
+              description={events.length === 0 ? "Check back soon — campus events will show up here." : "Try a different category."}
+            />
+          )}
         </div>
       )}
 
