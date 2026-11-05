@@ -1,20 +1,41 @@
-import { Search as SearchIcon, TrendingUp, Users, Sparkles, Compass } from "lucide-react";
+import { Heart, Search as SearchIcon, TrendingUp, Users, Sparkles, Compass } from "lucide-react";
 import { useState } from "react";
+import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import type { OrgProfile } from "@/data/mockEvents";
 import { useNavigate } from "react-router-dom";
 import BottomNav from "@/components/BottomNav";
+import { useFollow } from "@/contexts/FollowContext";
 import { useAsyncData } from "@/hooks/useAsyncData";
 import { fetchEvents } from "@/data/repository";
 import { EmptyState, ErrorState, ListSkeleton } from "@/components/states/DataStates";
 
+const OrgRow = ({ orgs }: { orgs: OrgProfile[] }) => (
+  <div className="flex gap-3 overflow-x-auto scrollbar-hide pb-2">
+    {orgs.map((org) => (
+      <div key={org.id} className="flex flex-col items-center gap-2 min-w-[80px]">
+        <div className="w-16 h-16 rounded-2xl bg-primary/10 flex items-center justify-center text-lg font-bold text-primary">
+          {org.avatar}
+        </div>
+        <div className="text-center">
+          <p className="text-xs font-semibold text-foreground truncate w-20">{org.name}</p>
+          <p className="text-[10px] text-muted-foreground">{org.followerCount.toLocaleString()}</p>
+        </div>
+      </div>
+    ))}
+  </div>
+);
+
 const Explore = () => {
   const [search, setSearch] = useState("");
   const navigate = useNavigate();
+  const { isFollowing } = useFollow();
   const query = useAsyncData(fetchEvents);
   const events = query.status === "success" ? query.data : [];
   const orgs = query.status === "success"
     ? Array.from(new Map(events.map((e) => [e.org.id, e.org])).values())
     : [];
+  const followedOrgs = orgs.filter((org) => isFollowing(org.id));
 
   const filteredEvents = search
     ? events.filter(
@@ -70,20 +91,20 @@ const Explore = () => {
         </div>
       )}
 
+      {query.status === "loading" && (
+        <div className="px-5 pt-4">
+          <ListSkeleton rows={3} />
+        </div>
+      )}
+
+      {query.status === "error" && (
+        <div className="px-5 pt-4">
+          <ErrorState description="We couldn't load events and organizations." onRetry={query.retry} />
+        </div>
+      )}
+
       {!search && (
         <>
-          {query.status === "loading" && (
-            <div className="px-5 pt-4">
-              <ListSkeleton rows={3} />
-            </div>
-          )}
-
-          {query.status === "error" && (
-            <div className="px-5 pt-4">
-              <ErrorState description="We couldn't load events and organizations." onRetry={query.retry} />
-            </div>
-          )}
-
           {query.status === "success" && events.length === 0 && (
             <div className="px-5 pt-4">
               <EmptyState
@@ -139,6 +160,24 @@ const Explore = () => {
                 </div>
               </div>
 
+              {/* Clubs you follow */}
+              <div className="px-5 py-4">
+                <div className="flex items-center gap-2 mb-3">
+                  <Heart className="w-4 h-4 text-primary" />
+                  <h2 className="text-sm font-bold text-foreground">Clubs You Follow</h2>
+                </div>
+                {followedOrgs.length === 0 ? (
+                  <EmptyState
+                    icon={Heart}
+                    title="You haven't followed any clubs yet."
+                    description="Open an event and tap Follow on its club to see the club here."
+                    action={<Button onClick={() => navigate("/")} className="rounded-xl">Browse events</Button>}
+                  />
+                ) : (
+                  <OrgRow orgs={followedOrgs} />
+                )}
+              </div>
+
               {/* Popular Orgs */}
               <div className="px-5 py-4">
                 <div className="flex items-center gap-2 mb-3">
@@ -148,19 +187,7 @@ const Explore = () => {
                 {orgs.length === 0 ? (
                   <p className="py-4 text-sm text-muted-foreground">No organizations to show yet.</p>
                 ) : (
-                  <div className="flex gap-3 overflow-x-auto scrollbar-hide pb-2">
-                    {orgs.map((org) => (
-                      <div key={org.id} className="flex flex-col items-center gap-2 min-w-[80px]">
-                        <div className="w-16 h-16 rounded-2xl bg-primary/10 flex items-center justify-center text-lg font-bold text-primary">
-                          {org.avatar}
-                        </div>
-                        <div className="text-center">
-                          <p className="text-xs font-semibold text-foreground truncate w-20">{org.name}</p>
-                          <p className="text-[10px] text-muted-foreground">{org.followerCount.toLocaleString()}</p>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
+                  <OrgRow orgs={orgs} />
                 )}
               </div>
             </>

@@ -107,8 +107,8 @@ const Index = () => {
           ) : (
             <EmptyState
               icon={CalendarDays}
-              title="No events available yet."
-              description="Check back soon — campus events will show up here."
+              title={events.length === 0 ? "No events available yet." : "No events in this category"}
+              description={events.length === 0 ? "Check back soon — campus events will show up here." : "Try a different category."}
             />
           )}
         </div>

@@ -44,6 +44,7 @@ const AttendanceReports = () => {
       </header>
 
       <main className="mx-auto w-full max-w-3xl space-y-4 px-4 py-4 sm:px-6">
+        {query.status === "success" && (
         <section className="grid grid-cols-2 gap-3">
           <article className="rounded-2xl border border-border bg-card p-4">
             <Users className="mb-2 h-4 w-4 text-primary" />
@@ -56,7 +57,9 @@ const AttendanceReports = () => {
             <p className="text-xs text-muted-foreground">Events reported</p>
           </article>
         </section>
+        )}
 
+        {query.status === "success" && records.length > 0 && (
         <section className="rounded-2xl border border-border bg-card p-4">
           <div className="mb-3 flex items-start gap-3">
             <div className="rounded-xl bg-primary/10 p-2">
@@ -74,6 +77,7 @@ const AttendanceReports = () => {
             Export Attendance Report (CSV)
           </Button>
         </section>
+        )}
 
         {query.status === "loading" && <ListSkeleton rows={3} />}
 
@@ -85,7 +89,7 @@ const AttendanceReports = () => {
           <EmptyState
             icon={Database}
             title="No attendance records yet"
-            description="Once students check in to events, their attendance will appear here and be included in the CSV export."
+            description="There are no attendance records to report or export yet."
           />
         )}
 
