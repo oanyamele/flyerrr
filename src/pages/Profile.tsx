@@ -3,20 +3,29 @@ import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import BottomNav from "@/components/BottomNav";
 import { useAuth } from "@/contexts/AuthContext";
+import { useFollow } from "@/contexts/FollowContext";
 import { useTheme } from "@/contexts/ThemeContext";
+import { useAsyncData } from "@/hooks/useAsyncData";
+import { fetchUserStats } from "@/data/repository";
+import { ErrorState, StatGridSkeleton } from "@/components/states/DataStates";
 import { useNavigate } from "react-router-dom";
-
-const stats = [
-  { icon: Calendar, label: "Events Attended", value: "23", color: "text-primary" },
-  { icon: Trophy, label: "Points Earned", value: "450", color: "text-warning" },
-  { icon: Star, label: "Orgs Following", value: "8", color: "text-accent" },
-  { icon: TrendingUp, label: "Streak", value: "5 weeks", color: "text-success" },
-];
 
 const Profile = () => {
   const { auth, logout } = useAuth();
+  const { followedOrgIds } = useFollow();
   const { theme, toggleTheme } = useTheme();
   const navigate = useNavigate();
+  const userId = auth.userId ?? null;
+  const query = useAsyncData(() => fetchUserStats(userId), [userId]);
+  const statRows =
+    query.status === "success"
+      ? [
+          { icon: Calendar, label: "Events Attended", value: String(query.data.eventsAttended), color: "text-primary" },
+          { icon: Trophy, label: "Points Earned", value: String(query.data.points), color: "text-warning" },
+          { icon: Star, label: "Orgs Following", value: String(followedOrgIds.length), color: "text-accent" },
+          { icon: TrendingUp, label: "Weeks Active", value: `${query.data.distinctWeeks} wk`, color: "text-success" },
+        ]
+      : [];
   const menuItems = [
     { label: "My Attendance History", path: "/attendance-history" },
     { label: "Rewards & Perks", path: "/rewards" },
@@ -86,7 +95,13 @@ const Profile = () => {
 
       {/* Stats Grid */}
       <div className="grid grid-cols-2 gap-3 px-5 mb-5">
-        {stats.map((s) => (
+        {query.status === "loading" && <StatGridSkeleton count={4} />}
+        {query.status === "error" && (
+          <div className="col-span-2">
+            <ErrorState description="We couldn't load your stats." onRetry={query.retry} />
+          </div>
+        )}
+        {statRows.map((s) => (
           <div key={s.label} className="p-4 rounded-2xl bg-card border border-border">
             <s.icon aria-hidden="true" className={`w-5 h-5 ${s.color} mb-2`} />
             <p className="text-xl font-bold text-foreground">{s.value}</p>
