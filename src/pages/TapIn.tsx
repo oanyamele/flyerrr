@@ -43,10 +43,11 @@ const TapIn = () => {
   };
 
   useEffect(() => {
-    if (!qrOpen || !auth.userId || !selectedEvent) return;
+    const userId = auth.userId;
+    if (!qrOpen || !userId || !selectedEvent) return;
 
     const refreshToken = () => {
-      const issued = issueDynamicCheckInToken(selectedEvent.id, auth.userId);
+      const issued = issueDynamicCheckInToken(selectedEvent.id, userId);
       setToken(issued.token);
       setExpiresAt(issued.expiresAt);
     };
