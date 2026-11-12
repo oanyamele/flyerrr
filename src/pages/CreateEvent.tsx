@@ -1,14 +1,17 @@
 import { useState } from "react";
+import { zodResolver } from "@hookform/resolvers/zod";
 import { ArrowLeft, Upload, MapPin, Clock, FileText, Tag, Users } from "lucide-react";
+import { useForm } from "react-hook-form";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import BottomNav from "@/components/BottomNav";
 import { useToast } from "@/hooks/use-toast";
 import { useCreateEvent } from "@/hooks/useEvents";
 import { useAuth } from "@/contexts/AuthContext";
-import type { EventCategory } from "@/data/mockEvents";
+import { eventFormSchema, type EventFormValues } from "@/schemas/forms";
 
 const CATEGORY_OPTIONS = [
   { value: "social", label: "Social" },
@@ -16,22 +19,29 @@ const CATEGORY_OPTIONS = [
   { value: "career", label: "Career" },
   { value: "sports", label: "Sports" },
   { value: "arts", label: "Arts" },
-];
+] as const;
 
 const CreateEvent = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const { auth } = useAuth();
   const createEvent = useCreateEvent();
-  const [title, setTitle] = useState("");
-  const [description, setDescription] = useState("");
-  const [location, setLocation] = useState("");
-  const [date, setDate] = useState("");
-  const [time, setTime] = useState("");
-  const [capacity, setCapacity] = useState("");
-  const [category, setCategory] = useState("social");
-  const [tags, setTags] = useState("");
   const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const form = useForm<EventFormValues>({
+    resolver: zodResolver(eventFormSchema),
+    defaultValues: {
+      title: "",
+      description: "",
+      category: "social",
+      date: "",
+      time: "",
+      location: "",
+      capacity: "",
+      tags: "",
+    },
+  });
+  const selectedCategory = form.watch("category");
+
 
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -42,20 +52,18 @@ const CreateEvent = () => {
     }
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (createEvent.isPending) return;
+  const handleSubmit = async (values: EventFormValues) => {
     try {
       const createdEvent = await createEvent.mutateAsync({
-        title,
-        description,
+        title: values.title,
+        description: values.description,
         image: imagePreview ?? "https://images.unsplash.com/photo-1523580846011-d3a5bc25702b?auto=format&fit=crop&w=1200&q=80",
-        category: category as EventCategory,
-        date,
-        time,
-        location,
-        capacity: Number(capacity) || 100,
-        tags: tags
+        category: values.category,
+        date: values.date,
+        time: values.time,
+        location: values.location,
+        capacity: values.capacity === "" ? 100 : Number(values.capacity),
+        tags: values.tags
           .split(",")
           .map((tag) => tag.trim())
           .filter(Boolean),
@@ -89,100 +97,180 @@ const CreateEvent = () => {
         </div>
       </header>
 
-      <form onSubmit={handleSubmit} className="px-5 py-4 space-y-5">
-        {/* Image Upload */}
-        <label className="block cursor-pointer">
-          <div className={`w-full h-48 rounded-2xl border-2 border-dashed border-border flex flex-col items-center justify-center overflow-hidden ${imagePreview ? "" : "bg-surface-sunken"}`}>
-            {imagePreview ? (
-              <img src={imagePreview} alt="Event graphic" className="w-full h-full object-cover" />
-            ) : (
-              <>
-                <Upload className="w-8 h-8 text-muted-foreground mb-2" />
-                <p className="text-sm font-medium text-muted-foreground">Upload Event Graphic</p>
-                <p className="text-xs text-muted-foreground">PNG, JPG, or video up to 10MB</p>
-              </>
+      <Form {...form}>
+        <form onSubmit={form.handleSubmit(handleSubmit)} className="px-5 py-4 space-y-5" noValidate>
+          {/* Image Upload */}
+          <label className="block cursor-pointer">
+            <div className={`w-full h-48 rounded-2xl border-2 border-dashed border-border flex flex-col items-center justify-center overflow-hidden ${imagePreview ? "" : "bg-surface-sunken"}`}>
+              {imagePreview ? (
+                <img src={imagePreview} alt="Event graphic" className="w-full h-full object-cover" />
+              ) : (
+                <>
+                  <Upload className="w-8 h-8 text-muted-foreground mb-2" />
+                  <p className="text-sm font-medium text-muted-foreground">Upload Event Graphic</p>
+                  <p className="text-xs text-muted-foreground">PNG, JPG, or video up to 10MB</p>
+                </>
+              )}
+            </div>
+            <input type="file" accept="image/*,video/*" className="hidden" onChange={handleImageUpload} />
+          </label>
+
+          {/* Title */}
+          <FormField
+            control={form.control}
+            name="title"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel className="flex items-center gap-2">
+                  <FileText className="w-4 h-4" /> Event Title
+                </FormLabel>
+                <FormControl>
+                  <Input {...field} placeholder="e.g. Fall Career Fair" className="rounded-xl h-12" />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
             )}
+          />
+
+          {/* Description */}
+          <FormField
+            control={form.control}
+            name="description"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Event Description</FormLabel>
+                <FormControl>
+                  <Textarea {...field} placeholder="Tell students what to expect..." className="rounded-xl min-h-[100px]" />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+
+          {/* Category */}
+          <FormField
+            control={form.control}
+            name="category"
+            render={() => (
+              <FormItem>
+                <FormLabel className="flex items-center gap-2">
+                  <Tag className="w-4 h-4" /> Category
+                </FormLabel>
+                <FormControl>
+                  <div className="flex gap-2 flex-wrap">
+                    {CATEGORY_OPTIONS.map((opt) => (
+                      <button
+                        key={opt.value}
+                        type="button"
+                        aria-pressed={selectedCategory === opt.value}
+                        onClick={() =>
+                          form.setValue("category", opt.value, {
+                            shouldDirty: true,
+                            shouldValidate: true,
+                          })
+                        }
+                        className={`px-4 py-2 rounded-full text-sm font-semibold transition-all ${
+                          selectedCategory === opt.value
+                            ? "bg-primary text-primary-foreground"
+                            : "bg-secondary text-secondary-foreground"
+                        }`}
+                      >
+                        {opt.label}
+                      </button>
+                    ))}
+                  </div>
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+
+          {/* Date & Time */}
+          <div className="grid grid-cols-2 gap-3">
+            <FormField
+              control={form.control}
+              name="date"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel className="flex items-center gap-2">
+                    <Clock className="w-4 h-4" /> Date
+                  </FormLabel>
+                  <FormControl>
+                    <Input {...field} type="date" className="rounded-xl h-12" />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="time"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Time</FormLabel>
+                  <FormControl>
+                    <Input {...field} type="time" className="rounded-xl h-12" />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
           </div>
-          <input type="file" accept="image/*,video/*" className="hidden" onChange={handleImageUpload} />
-        </label>
 
-        {/* Title */}
-        <div>
-          <label className="text-sm font-semibold text-foreground flex items-center gap-2 mb-1.5">
-            <FileText className="w-4 h-4" /> Event Title
-          </label>
-          <Input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="e.g. Fall Career Fair" className="rounded-xl h-12" required />
-        </div>
+          {/* Location */}
+          <FormField
+            control={form.control}
+            name="location"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel className="flex items-center gap-2">
+                  <MapPin className="w-4 h-4" /> Location
+                </FormLabel>
+                <FormControl>
+                  <Input {...field} placeholder="e.g. Student Center Ballroom" className="rounded-xl h-12" />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
 
-        {/* Description */}
-        <div>
-          <label className="text-sm font-semibold text-foreground mb-1.5 block">Event Description</label>
-          <Textarea value={description} onChange={(e) => setDescription(e.target.value)} placeholder="Tell students what to expect..." className="rounded-xl min-h-[100px]" required />
-        </div>
+          {/* Capacity */}
+          <FormField
+            control={form.control}
+            name="capacity"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel className="flex items-center gap-2">
+                  <Users className="w-4 h-4" /> Max Capacity
+                </FormLabel>
+                <FormControl>
+                  <Input {...field} type="number" min="1" max="10000" placeholder="e.g. 200" className="rounded-xl h-12" />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
 
-        {/* Category */}
-        <div>
-          <label className="text-sm font-semibold text-foreground flex items-center gap-2 mb-1.5">
-            <Tag className="w-4 h-4" /> Category
-          </label>
-          <div className="flex gap-2 flex-wrap">
-            {CATEGORY_OPTIONS.map((opt) => (
-              <button
-                key={opt.value}
-                type="button"
-                onClick={() => setCategory(opt.value)}
-                className={`px-4 py-2 rounded-full text-sm font-semibold transition-all ${
-                  category === opt.value
-                    ? "bg-primary text-primary-foreground"
-                    : "bg-secondary text-secondary-foreground"
-                }`}
-              >
-                {opt.label}
-              </button>
-            ))}
-          </div>
-        </div>
+          {/* Tags */}
+          <FormField
+            control={form.control}
+            name="tags"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Tags (comma separated)</FormLabel>
+                <FormControl>
+                  <Input {...field} placeholder="e.g. free food, networking, prizes" className="rounded-xl h-12" />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
 
-        {/* Date & Time */}
-        <div className="grid grid-cols-2 gap-3">
-          <div>
-            <label className="text-sm font-semibold text-foreground flex items-center gap-2 mb-1.5">
-              <Clock className="w-4 h-4" /> Date
-            </label>
-            <Input type="date" value={date} onChange={(e) => setDate(e.target.value)} className="rounded-xl h-12" required />
-          </div>
-          <div>
-            <label className="text-sm font-semibold text-foreground mb-1.5 block">Time</label>
-            <Input type="time" value={time} onChange={(e) => setTime(e.target.value)} className="rounded-xl h-12" required />
-          </div>
-        </div>
-
-        {/* Location */}
-        <div>
-          <label className="text-sm font-semibold text-foreground flex items-center gap-2 mb-1.5">
-            <MapPin className="w-4 h-4" /> Location
-          </label>
-          <Input value={location} onChange={(e) => setLocation(e.target.value)} placeholder="e.g. Student Center Ballroom" className="rounded-xl h-12" required />
-        </div>
-
-        {/* Capacity */}
-        <div>
-          <label className="text-sm font-semibold text-foreground flex items-center gap-2 mb-1.5">
-            <Users className="w-4 h-4" /> Max Capacity
-          </label>
-          <Input type="number" value={capacity} onChange={(e) => setCapacity(e.target.value)} placeholder="e.g. 200" className="rounded-xl h-12" />
-        </div>
-
-        {/* Tags */}
-        <div>
-          <label className="text-sm font-semibold text-foreground mb-1.5 block">Tags (comma separated)</label>
-          <Input value={tags} onChange={(e) => setTags(e.target.value)} placeholder="e.g. free food, networking, prizes" className="rounded-xl h-12" />
-        </div>
-
-        <Button type="submit" disabled={createEvent.isPending} className="w-full h-12 rounded-xl text-base font-bold">
-          {createEvent.isPending ? "Publishing…" : "Publish Event"}
-        </Button>
-      </form>
+          <Button type="submit" disabled={form.formState.isSubmitting} className="w-full h-12 rounded-xl text-base font-bold">
+            {form.formState.isSubmitting ? "Publishing…" : "Publish Event"}
+          </Button>
+        </form>
+      </Form>
 
       <BottomNav />
     </div>

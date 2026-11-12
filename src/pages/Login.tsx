@@ -1,12 +1,16 @@
 import { useState } from "react";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { useForm } from "react-hook-form";
 import { useAuth, UserRole } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Form, FormControl, FormField, FormItem, FormMessage } from "@/components/ui/form";
 import { User, Building2, ArrowRight, Send } from "lucide-react";
 import { motion } from "framer-motion";
 import { useNavigate } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
 import { authenticateUser, createUser } from "@/data/appDatabase";
+import { authFormSchema, type AuthFormValues } from "@/schemas/forms";
 
 const Login = () => {
   const { loginWithUser } = useAuth();
@@ -15,17 +19,19 @@ const Login = () => {
   const [step, setStep] = useState<"role" | "form">("role");
   const [role, setRole] = useState<UserRole>("student");
   const [authMode, setAuthMode] = useState<"signin" | "signup">("signin");
-  const [name, setName] = useState("");
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
+  const form = useForm<AuthFormValues>({
+    resolver: zodResolver(authFormSchema(authMode)),
+    defaultValues: { name: "", email: "", password: "" },
+  });
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!email.trim() || !password.trim()) return;
-
+  const handleSubmit = (values: AuthFormValues) => {
     if (authMode === "signup") {
-      if (!name.trim()) return;
-      const result = createUser({ email, password, name, role });
+      const result = createUser({
+        email: values.email,
+        password: values.password,
+        name: values.name,
+        role,
+      });
       if (!result.ok) {
         toast({ title: "Sign Up failed", description: result.error, variant: "destructive" });
         return;
@@ -36,13 +42,18 @@ const Login = () => {
       return;
     }
 
-    const signIn = authenticateUser({ email, password, role });
+    const signIn = authenticateUser({ email: values.email, password: values.password, role });
     if (!signIn.ok) {
       toast({ title: "Sign In failed", description: signIn.error, variant: "destructive" });
       return;
     }
     loginWithUser(signIn.user);
     navigate("/", { replace: true });
+  };
+
+  const toggleAuthMode = () => {
+    setAuthMode((current) => (current === "signin" ? "signup" : "signin"));
+    form.reset({ name: "", email: form.getValues("email"), password: "" });
   };
 
   return (
@@ -91,74 +102,99 @@ const Login = () => {
             </button>
           </div>
         ) : (
-          <motion.form
-            initial={{ opacity: 0, x: 20 }}
-            animate={{ opacity: 1, x: 0 }}
-            onSubmit={handleSubmit}
-            className="space-y-4"
-          >
-            <button
-              type="button"
-              onClick={() => setStep("role")}
-              className="text-sm text-muted-foreground hover:text-foreground mb-2"
+          <Form {...form}>
+            <motion.form
+              initial={{ opacity: 0, x: 20 }}
+              animate={{ opacity: 1, x: 0 }}
+              onSubmit={form.handleSubmit(handleSubmit)}
+              className="space-y-4"
+              noValidate
             >
-              &larr; Back
-            </button>
-
-            <p className="text-sm font-semibold text-foreground">
-              {role === "student"
-                ? authMode === "signin"
-                  ? "Student Sign In"
-                  : "Student Sign Up"
-                : authMode === "signin"
-                ? "Organization Officer Sign In"
-                : "Organization Officer Sign Up"}
-            </p>
-
-            {authMode === "signup" && (
-              <Input
-                aria-label="Full Name"
-                placeholder="Full Name"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                className="rounded-xl h-12"
-                required={authMode === "signup"}
-              />
-            )}
-            <Input
-              type="email"
-              aria-label="University Email"
-              placeholder="University Email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              className="rounded-xl h-12"
-              required
-            />
-            <Input
-              type="password"
-              aria-label="Password"
-              placeholder="Password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              className="rounded-xl h-12"
-              required
-            />
-
-            <Button type="submit" className="w-full h-12 rounded-xl text-base font-bold">
-              {authMode === "signin" ? "Sign In" : "Create Account"}
-            </Button>
-
-            <p className="text-xs text-center text-muted-foreground">
-              {authMode === "signin" ? "Don't have an account?" : "Already have an account?"}{" "}
               <button
                 type="button"
-                onClick={() => setAuthMode((prev) => (prev === "signin" ? "signup" : "signin"))}
-                className="text-primary font-semibold"
+                onClick={() => setStep("role")}
+                className="text-sm text-muted-foreground hover:text-foreground mb-2"
               >
-                {authMode === "signin" ? "Sign Up" : "Sign In"}
+                &larr; Back
               </button>
-            </p>
-          </motion.form>
+
+              <p className="text-sm font-semibold text-foreground">
+                {role === "student"
+                  ? authMode === "signin"
+                    ? "Student Sign In"
+                    : "Student Sign Up"
+                  : authMode === "signin"
+                  ? "Organization Officer Sign In"
+                  : "Organization Officer Sign Up"}
+              </p>
+
+              {authMode === "signup" && (
+                <FormField
+                  control={form.control}
+                  name="name"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormControl>
+                        <Input {...field} autoComplete="name" aria-label="Full Name" placeholder="Full Name" className="rounded-xl h-12" />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              )}
+
+              <FormField
+                control={form.control}
+                name="email"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormControl>
+                      <Input
+                        {...field}
+                        type="email"
+                        autoComplete="email"
+                        aria-label="University Email"
+                        placeholder="University Email"
+                        className="rounded-xl h-12"
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="password"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormControl>
+                      <Input
+                        {...field}
+                        type="password"
+                        autoComplete={authMode === "signin" ? "current-password" : "new-password"}
+                        aria-label="Password"
+                        placeholder="Password"
+                        className="rounded-xl h-12"
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <Button type="submit" className="w-full h-12 rounded-xl text-base font-bold">
+                {authMode === "signin" ? "Sign In" : "Create Account"}
+              </Button>
+
+              <p className="text-xs text-center text-muted-foreground">
+                {authMode === "signin" ? "Don't have an account?" : "Already have an account?"}{" "}
+                <button type="button" onClick={toggleAuthMode} className="text-primary font-semibold">
+                  {authMode === "signin" ? "Sign Up" : "Sign In"}
+                </button>
+              </p>
+            </motion.form>
+          </Form>
         )}
       </motion.div>
     </div>
