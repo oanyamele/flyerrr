@@ -39,11 +39,8 @@ jobs:
       - name: Typecheck
         run: npx tsc --noEmit -p tsconfig.app.json
 
-      # Currently 5 errors (R-07, and 3 in generated shadcn/ui files).
-      # Remove `continue-on-error` once issue "Fix conditional React hooks" lands.
       - name: Lint
         run: npx eslint .
-        continue-on-error: true
 
       - name: Test
         run: npm test
