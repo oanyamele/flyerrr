@@ -1,4 +1,4 @@
-import { ArrowLeft, Bell, BellOff, Volume2 } from "lucide-react";
+import { ArrowLeft } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { Switch } from "@/components/ui/switch";
 import { useState } from "react";
