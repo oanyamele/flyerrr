@@ -1,21 +1,57 @@
 /**
  * The single boundary between the app and browser storage.
  *
- * Key values are deliberately unchanged from what is already saved in users'
- * browsers: renaming one without a migration would log people out or lose their
- * data. Unifying the names is tracked separately in issue #28.
+ * Every key follows one convention: `flyerrr_<name>_v<schema version>`. Bump the
+ * version when a value's shape changes incompatibly, and add the old key to
+ * LEGACY_KEYS so saved data is carried over instead of lost.
  */
 export const STORAGE_KEYS = {
-  auth: "flyerrr_auth",
-  follows: "flyerrr_follows",
-  theme: "flyerrr_theme",
-  database: "flyer_db_v1",
-  rsvps: "flyer_rsvp_v1",
-  reminders: "flyer_reminders_v1",
-  checkInTokens: "flyer_checkin_tokens_v1",
+  auth: "flyerrr_auth_v1",
+  follows: "flyerrr_follows_v1",
+  theme: "flyerrr_theme_v1",
+  database: "flyerrr_db_v1",
+  rsvps: "flyerrr_rsvps_v1",
+  reminders: "flyerrr_reminders_v1",
+  checkInTokens: "flyerrr_checkin_tokens_v1",
 } as const;
 
 export type StorageKey = (typeof STORAGE_KEYS)[keyof typeof STORAGE_KEYS];
+
+/**
+ * Names used before issue #28 unified them. The stored values have the same shape,
+ * so migration copies them unchanged.
+ */
+export const LEGACY_KEYS: Record<StorageKey, string> = {
+  [STORAGE_KEYS.auth]: "flyerrr_auth",
+  [STORAGE_KEYS.follows]: "flyerrr_follows",
+  [STORAGE_KEYS.theme]: "flyerrr_theme",
+  [STORAGE_KEYS.database]: "flyer_db_v1",
+  [STORAGE_KEYS.rsvps]: "flyer_rsvp_v1",
+  [STORAGE_KEYS.reminders]: "flyer_reminders_v1",
+  [STORAGE_KEYS.checkInTokens]: "flyer_checkin_tokens_v1",
+};
+
+/**
+ * Moves data saved under legacy key names to the current ones. Call once before
+ * the app renders. Safe to run repeatedly. An old key is removed only after its
+ * value is safely under the new name. If a new value already exists it wins,
+ * because it was written more recently. Never throws: if storage is blocked or
+ * full, the old data is left where it is and the app starts as it would anyway.
+ */
+export const migrateLegacyKeys = (): void => {
+  for (const [currentKey, legacyKey] of Object.entries(LEGACY_KEYS)) {
+    try {
+      const legacyValue = localStorage.getItem(legacyKey);
+      if (legacyValue === null) continue;
+      if (localStorage.getItem(currentKey) === null) {
+        localStorage.setItem(currentKey, legacyValue);
+      }
+      localStorage.removeItem(legacyKey);
+    } catch {
+      // Leave this key alone and keep migrating the others.
+    }
+  }
+};
 
 /** Returns the raw saved value, or null when it is missing or storage is blocked. */
 export const readString = (key: StorageKey): string | null => {
