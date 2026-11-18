@@ -11,9 +11,11 @@ import { useNavigate } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
 import { authenticateUser, createUser } from "@/data/appDatabase";
 import { authFormSchema, type AuthFormValues } from "@/schemas/forms";
+import { apiRequest, useHttpBackend } from "@/services/httpApi";
+import type { AuthSession } from "@/services/authService";
 
 const Login = () => {
-  const { loginWithUser } = useAuth();
+  const { loginWithUser, loginWithSession } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
   const [step, setStep] = useState<"role" | "form">("role");
@@ -24,7 +26,17 @@ const Login = () => {
     defaultValues: { name: "", email: "", password: "" },
   });
 
-  const handleSubmit = (values: AuthFormValues) => {
+  const handleSubmit = async (values: AuthFormValues) => {
+    if (useHttpBackend) {
+      try {
+        const session = await apiRequest<AuthSession>(authMode === "signup" ? "/auth/register" : "/auth/login", { method: "POST", body: JSON.stringify(values) });
+        loginWithSession(session);
+        navigate("/", { replace: true });
+      } catch (error) {
+        toast({ title: "Couldn't sign in", description: error instanceof Error ? error.message : "Try again.", variant: "destructive" });
+      }
+      return;
+    }
     if (authMode === "signup") {
       const result = createUser({
         email: values.email,
@@ -183,7 +195,8 @@ const Login = () => {
                 )}
               />
 
-              <Button type="submit" className="w-full h-12 rounded-xl text-base font-bold">
+              {useHttpBackend && authMode === "signup" && <p className="text-xs text-muted-foreground">New accounts are students. Officer access is assigned by your administrator.</p>}
+              <Button type="submit" disabled={form.formState.isSubmitting} className="w-full h-12 rounded-xl text-base font-bold">
                 {authMode === "signin" ? "Sign In" : "Create Account"}
               </Button>
 

@@ -61,6 +61,8 @@ const CreateEvent = () => {
         category: values.category,
         date: values.date,
         time: values.time,
+        startsAt: new Date(`${values.date}T${values.time}:00`).toISOString(),
+        timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
         location: values.location,
         capacity: values.capacity === "" ? 100 : Number(values.capacity),
         tags: values.tags

@@ -3,6 +3,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { act, cleanup, renderHook, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { useCreateEvent, useEvents } from "./useEvents";
+import { AuthProvider } from "@/contexts/AuthContext";
 
 const eventInput = {
   title: "Officer-published career workshop",
@@ -21,7 +22,7 @@ const eventInput = {
 let client: QueryClient;
 
 const wrapper = ({ children }: PropsWithChildren) => (
-  <QueryClientProvider client={client}>{children}</QueryClientProvider>
+  <QueryClientProvider client={client}><AuthProvider>{children}</AuthProvider></QueryClientProvider>
 );
 
 beforeEach(() => {
