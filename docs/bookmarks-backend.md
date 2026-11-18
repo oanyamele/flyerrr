@@ -116,7 +116,9 @@ API/browser suites create isolated randomly named PostgreSQL schemas and remove
 only those schemas on completion. They cover independent sessions, officer
 publish and live search, reload and API restart persistence, idempotence,
 cross-account isolation, rejected writes, sign-out/revocation, shared validation,
-and failed-save recovery. CI runs the same suites against a PostgreSQL service.
+and failed-save recovery. CI runs the same suites against a PostgreSQL service,
+using the Chrome installation supplied by the Ubuntu 24.04 runner. Local tests
+use Playwright's Chromium unless `PLAYWRIGHT_CHANNEL` is explicitly set.
 
 ## Scope and integration
 

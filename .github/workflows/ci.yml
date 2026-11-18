@@ -62,13 +62,11 @@ jobs:
         env:
           TEST_DATABASE_URL: postgres://flyerrr:flyerrr_test@127.0.0.1:5432/flyerrr_test
 
-      - name: Install browser
-        run: bunx playwright install --with-deps chromium
-
       - name: Bookmark browser tests
         run: bun run test:bookmarks:browser
         env:
           TEST_DATABASE_URL: postgres://flyerrr:flyerrr_test@127.0.0.1:5432/flyerrr_test
+          PLAYWRIGHT_CHANNEL: chrome
 
       - name: Build
         run: npm run build
