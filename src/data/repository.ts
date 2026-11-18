@@ -4,7 +4,7 @@
  * and error states uniformly. Storage failures surface as DataAccessError
  * instead of being silently treated as "no data".
  */
-import { getDatabase, type EventRecord } from "@/data/appDatabase";
+import { createEventRecord, getDatabase, type EventRecord } from "@/data/appDatabase";
 import { getAttendanceSummary, type AttendanceRecord, type AttendanceSummary } from "@/data/attendanceStore";
 import { getReminderEvents } from "@/data/checkInStore";
 
@@ -39,7 +39,15 @@ const run = <T,>(fn: () => T): Promise<T> =>
 
 export const fetchEvents = () => run(() => loadDatabase().events);
 
-export const fetchSavedEvents = () => run(() => loadDatabase().events.filter((e) => e.saved));
+export const fetchEvent = (id: string) =>
+  run(() => loadDatabase().events.find((event) => event.id === id) ?? null);
+
+export const saveNewEvent = (input: Parameters<typeof createEventRecord>[0]) =>
+  run(() => {
+    // Check the existing data before createEventRecord can reseed corrupt storage.
+    loadDatabase();
+    return createEventRecord(input);
+  });
 
 export const fetchAttendanceForUser = (userId: string | null) =>
   run<AttendanceRecord[]>(() =>

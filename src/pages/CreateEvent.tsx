@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import BottomNav from "@/components/BottomNav";
 import { useToast } from "@/hooks/use-toast";
-import { createEventRecord } from "@/data/appDatabase";
+import { useCreateEvent } from "@/hooks/useEvents";
 import { useAuth } from "@/contexts/AuthContext";
 import type { EventCategory } from "@/data/mockEvents";
 
@@ -22,6 +22,7 @@ const CreateEvent = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const { auth } = useAuth();
+  const createEvent = useCreateEvent();
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [location, setLocation] = useState("");
@@ -41,10 +42,11 @@ const CreateEvent = () => {
     }
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (createEvent.isPending) return;
     try {
-      const createdEvent = createEventRecord({
+      const createdEvent = await createEvent.mutateAsync({
         title,
         description,
         image: imagePreview ?? "https://images.unsplash.com/photo-1523580846011-d3a5bc25702b?auto=format&fit=crop&w=1200&q=80",
@@ -65,7 +67,7 @@ const CreateEvent = () => {
         title: "Event Created",
         description: `"${createdEvent.title}" has been published to the feed.`,
       });
-      navigate("/", { state: { refreshFeed: Date.now() } });
+      navigate("/");
     } catch (error) {
       toast({
         title: "Publish failed",
@@ -177,8 +179,8 @@ const CreateEvent = () => {
           <Input value={tags} onChange={(e) => setTags(e.target.value)} placeholder="e.g. free food, networking, prizes" className="rounded-xl h-12" />
         </div>
 
-        <Button type="submit" className="w-full h-12 rounded-xl text-base font-bold">
-          Publish Event
+        <Button type="submit" disabled={createEvent.isPending} className="w-full h-12 rounded-xl text-base font-bold">
+          {createEvent.isPending ? "Publishing…" : "Publish Event"}
         </Button>
       </form>
 

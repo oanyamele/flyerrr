@@ -3,13 +3,15 @@ import { useNavigate } from "react-router-dom";
 import BottomNav from "@/components/BottomNav";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { useAsyncData } from "@/hooks/useAsyncData";
-import { fetchSavedEvents } from "@/data/repository";
+import { useEvents } from "@/hooks/useEvents";
+import type { EventRecord } from "@/data/appDatabase";
 import { EmptyState, ErrorState, ListSkeleton } from "@/components/states/DataStates";
+
+const selectSaved = (events: EventRecord[]) => events.filter((event) => event.saved);
 
 const Saved = () => {
   const navigate = useNavigate();
-  const query = useAsyncData(fetchSavedEvents);
+  const query = useEvents(selectSaved);
 
   return (
     <div className="min-h-screen bg-background pb-24">
@@ -23,8 +25,8 @@ const Saved = () => {
       </header>
 
       <div className="px-5">
-        {query.status === "loading" && <ListSkeleton rows={4} />}
-        {query.status === "error" && <ErrorState description="We couldn't load your saved events." onRetry={query.retry} />}
+        {query.isPending && <ListSkeleton rows={4} />}
+        {query.status === "error" && <ErrorState description="We couldn't load your saved events." onRetry={() => void query.refetch()} />}
         {query.status === "success" && query.data.length === 0 && (
           <EmptyState
             icon={Bookmark}
