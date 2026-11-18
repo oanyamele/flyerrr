@@ -3,15 +3,13 @@ import { useNavigate } from "react-router-dom";
 import BottomNav from "@/components/BottomNav";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { useEvents } from "@/hooks/useEvents";
-import type { EventRecord } from "@/data/appDatabase";
+import { useBookmarks } from "@/hooks/useBookmarks";
+import SaveEventButton from "@/components/SaveEventButton";
 import { EmptyState, ErrorState, ListSkeleton } from "@/components/states/DataStates";
-
-const selectSaved = (events: EventRecord[]) => events.filter((event) => event.saved);
 
 const Saved = () => {
   const navigate = useNavigate();
-  const query = useEvents(selectSaved);
+  const query = useBookmarks();
 
   return (
     <div className="min-h-screen bg-background pb-24">
@@ -38,19 +36,20 @@ const Saved = () => {
         {query.status === "success" && query.data.length > 0 && (
           <div className="space-y-3">
             {query.data.map((e) => (
-              <button
+              <div
                 key={e.id}
-                onClick={() => navigate(`/event/${e.id}`)}
                 className="w-full flex items-center gap-3 p-3 rounded-2xl bg-card border border-border text-left tap-highlight-none"
               >
+                <button type="button" onClick={() => navigate(`/event/${e.id}`)} className="flex min-w-0 flex-1 items-center gap-3 text-left">
                 <img src={e.image} alt={e.title} className="w-16 h-16 rounded-xl object-cover" />
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-bold text-foreground truncate">{e.title}</p>
                   <p className="text-xs text-muted-foreground">{e.org.name}</p>
                   <p className="text-xs text-muted-foreground">{e.date} · {e.time}</p>
                 </div>
-                <Bookmark className="w-5 h-5 text-primary fill-primary flex-shrink-0" />
-              </button>
+                </button>
+                <SaveEventButton eventId={e.id} className="rounded-full p-3" />
+              </div>
             ))}
           </div>
         )}

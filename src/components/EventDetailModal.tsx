@@ -1,7 +1,9 @@
 import { useMemo, useState } from "react";
-import { X, Heart, Bookmark, Share2, MapPin, Clock, Users, CheckCircle2 } from "lucide-react";
+import { X, Share2, MapPin, Clock, Users, CheckCircle2 } from "lucide-react";
 import type { CampusEvent } from "@/data/mockEvents";
 import { useFollow } from "@/contexts/FollowContext";
+import SaveEventButton from "@/components/SaveEventButton";
+import { useBookmarks } from "@/hooks/useBookmarks";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 
@@ -12,8 +14,7 @@ interface EventDetailModalProps {
 }
 
 const EventDetailModal = ({ event, onClose, onOpenFullDetails }: EventDetailModalProps) => {
-  const [liked, setLiked] = useState(false);
-  const [saved, setSaved] = useState(event.saved);
+  const saved = useBookmarks().data?.some(item => item.id === event.id) ?? false;
   const [rsvp, setRsvp] = useState(false);
   const { isFollowing, toggleFollow } = useFollow();
 
@@ -22,7 +23,6 @@ const EventDetailModal = ({ event, onClose, onOpenFullDetails }: EventDetailModa
     [event.attendees, event.capacity],
   );
 
-  const likeCount = event.likes + (liked ? 1 : 0);
 
   const handleShare = async () => {
     const url = `${window.location.origin}/event/${event.id}`;
@@ -57,28 +57,7 @@ const EventDetailModal = ({ event, onClose, onOpenFullDetails }: EventDetailModa
         </button>
 
         <div className="absolute top-[max(1rem,env(safe-area-inset-top))] right-4 flex gap-2">
-          <button
-            type="button"
-            onClick={() => setLiked((v) => !v)}
-            className={`w-10 h-10 rounded-full backdrop-blur flex items-center justify-center ${
-              liked ? "bg-primary" : "bg-background/70"
-            }`}
-            aria-label={liked ? "Unlike event" : "Like event"}
-            aria-pressed={liked}
-          >
-            <Heart aria-hidden="true" className={`w-5 h-5 ${liked ? "fill-primary-foreground text-primary-foreground" : "text-foreground"}`} />
-          </button>
-          <button
-            type="button"
-            onClick={() => setSaved((v) => !v)}
-            className={`w-10 h-10 rounded-full backdrop-blur flex items-center justify-center ${
-              saved ? "bg-primary" : "bg-background/70"
-            }`}
-            aria-label={saved ? "Unsave event" : "Save event"}
-            aria-pressed={saved}
-          >
-            <Bookmark aria-hidden="true" className={`w-5 h-5 ${saved ? "fill-primary-foreground text-primary-foreground" : "text-foreground"}`} />
-          </button>
+          <SaveEventButton eventId={event.id} className="w-10 h-10 rounded-full bg-background/70 backdrop-blur flex items-center justify-center" />
           <button
             type="button"
             onClick={handleShare}
@@ -164,11 +143,8 @@ const EventDetailModal = ({ event, onClose, onOpenFullDetails }: EventDetailModa
             </div>
           </div>
 
-          <div className="grid grid-cols-3 gap-3 mb-5">
-            <div className="p-3 rounded-2xl bg-surface-sunken text-center border border-border">
-              <p className="text-xs text-muted-foreground">Likes</p>
-              <p className="text-sm font-bold text-foreground">{likeCount.toLocaleString()}</p>
-            </div>
+          <div className="grid grid-cols-2 gap-3 mb-5">
+
             <div className="p-3 rounded-2xl bg-surface-sunken text-center border border-border">
               <p className="text-xs text-muted-foreground">Saved</p>
               <p className="text-sm font-bold text-foreground">{saved ? "Yes" : "No"}</p>

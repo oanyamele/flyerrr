@@ -1,5 +1,5 @@
 import { useParams, useNavigate } from "react-router-dom";
-import { ArrowLeft, Bookmark, Share2, MapPin, Clock, Users, CheckCircle2, QrCode } from "lucide-react";
+import { ArrowLeft, Share2, MapPin, Clock, Users, CheckCircle2, QrCode } from "lucide-react";
 import { motion } from "framer-motion";
 import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
@@ -8,6 +8,7 @@ import { useFollow } from "@/contexts/FollowContext";
 import BottomNav from "@/components/BottomNav";
 import { ErrorState, EventCardSkeleton } from "@/components/states/DataStates";
 import { useEvent } from "@/hooks/useEvents";
+import SaveEventButton from "@/components/SaveEventButton";
 import CheckInQr from "@/components/CheckInQr";
 import { useAuth } from "@/contexts/AuthContext";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -91,9 +92,7 @@ const EventDetail = () => {
           <button type="button" aria-label="Share event" className="w-10 h-10 rounded-full bg-background/80 backdrop-blur flex items-center justify-center">
             <Share2 aria-hidden="true" className="w-5 h-5 text-foreground" />
           </button>
-          <button type="button" aria-label="Save event" className="w-10 h-10 rounded-full bg-background/80 backdrop-blur flex items-center justify-center">
-            <Bookmark aria-hidden="true" className="w-5 h-5 text-foreground" />
-          </button>
+          <SaveEventButton eventId={event.id} className="w-10 h-10 rounded-full bg-background/80 backdrop-blur flex items-center justify-center" />
         </div>
       </div>
 

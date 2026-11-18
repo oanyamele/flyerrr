@@ -20,6 +20,18 @@ jobs:
     name: verify
     runs-on: ubuntu-latest
 
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_DB: flyerrr_test
+          POSTGRES_USER: flyerrr
+          POSTGRES_PASSWORD: flyerrr_test
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U flyerrr -d flyerrr_test"
+          --health-interval 2s --health-timeout 3s --health-retries 20
+
     steps:
       - uses: actions/checkout@v4
 
@@ -37,13 +49,26 @@ jobs:
         run: bun install --frozen-lockfile
 
       - name: Typecheck
-        run: npx tsc --noEmit -p tsconfig.app.json
+        run: bun run typecheck
 
       - name: Lint
         run: npx eslint .
 
       - name: Test
         run: npm test
+
+      - name: API integration tests
+        run: bun run test:api
+        env:
+          TEST_DATABASE_URL: postgres://flyerrr:flyerrr_test@127.0.0.1:5432/flyerrr_test
+
+      - name: Install browser
+        run: bunx playwright install --with-deps chromium
+
+      - name: Bookmark browser tests
+        run: bun run test:bookmarks:browser
+        env:
+          TEST_DATABASE_URL: postgres://flyerrr:flyerrr_test@127.0.0.1:5432/flyerrr_test
 
       - name: Build
         run: npm run build
