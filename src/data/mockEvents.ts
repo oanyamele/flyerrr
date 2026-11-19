@@ -1,7 +1,3 @@
-import eventHero from "@/assets/event-hero.jpg";
-import eventHackathon from "@/assets/event-hackathon.jpg";
-import eventCareer from "@/assets/event-career.jpg";
-import eventSports from "@/assets/event-sports.jpg";
 import eventSocial from "@/assets/event-social.jpg";
 
 export type EventCategory = "social" | "academic" | "career" | "sports" | "arts";

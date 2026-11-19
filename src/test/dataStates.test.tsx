@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { act, fireEvent, render, renderHook, screen, waitFor, within } from "@testing-library/react";
 import type { ComponentType } from "react";
 import { MemoryRouter } from "react-router-dom";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { FollowProvider } from "@/contexts/FollowContext";
 import { ThemeProvider } from "@/contexts/ThemeContext";
@@ -19,17 +20,21 @@ import TapIn from "@/pages/TapIn";
 
 const DB_KEY = "flyer_db_v1";
 
+// Pages that load events use TanStack Query, so each render gets a fresh client.
+// Retries are off so error states appear straight away.
 const renderPage = (Page: ComponentType) =>
   render(
-    <MemoryRouter>
-      <ThemeProvider>
-        <AuthProvider>
-          <FollowProvider>
-            <Page />
-          </FollowProvider>
-        </AuthProvider>
-      </ThemeProvider>
-    </MemoryRouter>,
+    <QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}>
+      <MemoryRouter>
+        <ThemeProvider>
+          <AuthProvider>
+            <FollowProvider>
+              <Page />
+            </FollowProvider>
+          </AuthProvider>
+        </ThemeProvider>
+      </MemoryRouter>
+    </QueryClientProvider>,
   );
 
 const attendance = (overrides: Partial<AttendanceRecord> = {}): AttendanceRecord => ({

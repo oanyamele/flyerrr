@@ -8,6 +8,7 @@ export default defineConfig(({ mode }) => ({
   server: {
     host: "::",
     port: 8080,
+    proxy: { "/api": process.env.API_PROXY_TARGET ?? "http://127.0.0.1:3001" },
     hmr: {
       overlay: false,
     },

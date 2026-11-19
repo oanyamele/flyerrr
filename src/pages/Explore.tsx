@@ -6,9 +6,8 @@ import type { OrgProfile } from "@/data/mockEvents";
 import { useNavigate } from "react-router-dom";
 import BottomNav from "@/components/BottomNav";
 import { useFollow } from "@/contexts/FollowContext";
-import { useAsyncData } from "@/hooks/useAsyncData";
-import { fetchEvents } from "@/data/repository";
 import { EmptyState, ErrorState, ListSkeleton } from "@/components/states/DataStates";
+import { useEvents } from "@/hooks/useEvents";
 
 const OrgRow = ({ orgs }: { orgs: OrgProfile[] }) => (
   <div className="flex gap-3 overflow-x-auto scrollbar-hide pb-2">
@@ -30,19 +29,20 @@ const Explore = () => {
   const [search, setSearch] = useState("");
   const navigate = useNavigate();
   const { isFollowing } = useFollow();
-  const query = useAsyncData(fetchEvents);
-  const events = query.status === "success" ? query.data : [];
-  const orgs = query.status === "success"
-    ? Array.from(new Map(events.map((e) => [e.org.id, e.org])).values())
-    : [];
+
+  const query = useEvents();
+  const events = query.data ?? [];
+  // Organizations come from the loaded events, so they match what the API returns.
+  const orgs = Array.from(new Map(events.map((e) => [e.org.id, e.org])).values());
   const followedOrgs = orgs.filter((org) => isFollowing(org.id));
 
-  const filteredEvents = search
+  const searchTerm = search.trim().toLowerCase();
+  const filteredEvents = searchTerm
     ? events.filter(
         (e) =>
-          e.title.toLowerCase().includes(search.toLowerCase()) ||
-          e.org.name.toLowerCase().includes(search.toLowerCase()) ||
-          e.tags.some((t) => t.toLowerCase().includes(search.toLowerCase()))
+          e.title.toLowerCase().includes(searchTerm) ||
+          e.org.name.toLowerCase().includes(searchTerm) ||
+          e.tags.some((t) => t.toLowerCase().includes(searchTerm))
       )
     : [];
 
@@ -63,7 +63,29 @@ const Explore = () => {
         </div>
       </header>
 
-      {search && filteredEvents.length > 0 && (
+      {query.isPending && (
+        <div className="px-5 py-4">
+          <ListSkeleton rows={3} />
+        </div>
+      )}
+
+      {query.isError && (
+        <div className="px-5 py-4">
+          <ErrorState description="We couldn't load events and organizations." onRetry={() => void query.refetch()} />
+        </div>
+      )}
+
+      {query.isSuccess && searchTerm && filteredEvents.length === 0 && (
+        <div className="px-5 pt-4">
+          <EmptyState
+            icon={SearchIcon}
+            title="No results found"
+            description={`Nothing matches "${search.trim()}". Try a different search.`}
+          />
+        </div>
+      )}
+
+      {searchTerm && filteredEvents.length > 0 && (
         <div className="px-5 py-4 space-y-2">
           {filteredEvents.map((e) => (
             <button
@@ -81,117 +103,87 @@ const Explore = () => {
         </div>
       )}
 
-      {search && query.status === "success" && filteredEvents.length === 0 && (
+      {!searchTerm && query.isSuccess && events.length === 0 && (
         <div className="px-5 pt-4">
           <EmptyState
-            icon={SearchIcon}
-            title="No results found"
-            description={`Nothing matches "${search}". Try a different search.`}
+            icon={Compass}
+            title="No events available yet."
+            description="Once organizations post events, you'll discover them here."
           />
         </div>
       )}
 
-      {query.status === "loading" && (
-        <div className="px-5 pt-4">
-          <ListSkeleton rows={3} />
-        </div>
-      )}
-
-      {query.status === "error" && (
-        <div className="px-5 pt-4">
-          <ErrorState description="We couldn't load events and organizations." onRetry={query.retry} />
-        </div>
-      )}
-
-      {!search && (
+      {!searchTerm && query.isSuccess && events.length > 0 && (
         <>
-          {query.status === "success" && events.length === 0 && (
-            <div className="px-5 pt-4">
-              <EmptyState
-                icon={Compass}
-                title="No events available yet."
-                description="Once organizations post events, you'll discover them here."
-              />
+          {/* Trending */}
+          <div className="px-5 py-4">
+            <div className="flex items-center gap-2 mb-3">
+              <TrendingUp className="w-4 h-4 text-primary" />
+              <h2 className="text-sm font-bold text-foreground">Trending Now</h2>
             </div>
-          )}
+            <div className="flex gap-2 flex-wrap">
+              {["career fair", "hackathon", "game night", "open gym", "free food"].map((tag) => (
+                <button
+                  key={tag}
+                  type="button"
+                  onClick={() => setSearch(tag)}
+                  className="inline-flex items-center rounded-full bg-secondary px-2.5 py-0.5 text-xs font-semibold text-secondary-foreground"
+                >
+                  {tag}
+                </button>
+              ))}
+            </div>
+          </div>
 
-          {query.status === "success" && events.length > 0 && (
-            <>
-              {/* Trending */}
-              <div className="px-5 py-4">
-                <div className="flex items-center gap-2 mb-3">
-                  <TrendingUp className="w-4 h-4 text-primary" />
-                  <h2 className="text-sm font-bold text-foreground">Trending Now</h2>
-                </div>
-                <div className="flex gap-2 flex-wrap">
-                  {["career fair", "hackathon", "game night", "open gym", "free food"].map((tag) => (
-                    <button
-                      key={tag}
-                      type="button"
-                      onClick={() => setSearch(tag)}
-                      className="inline-flex items-center rounded-full bg-secondary px-2.5 py-0.5 text-xs font-semibold text-secondary-foreground"
-                    >
-                      {tag}
-                    </button>
-                  ))}
-                </div>
-              </div>
+          {/* Suggested for you */}
+          <div className="px-5 py-2">
+            <div className="flex items-center gap-2 mb-3">
+              <Sparkles className="w-4 h-4 text-accent" />
+              <h2 className="text-sm font-bold text-foreground">Suggested for You</h2>
+            </div>
+            <div className="space-y-2">
+              {events.slice(0, 3).map((e) => (
+                <button
+                  key={e.id}
+                  onClick={() => navigate(`/event/${e.id}`)}
+                  className="w-full flex items-center gap-3 p-3 rounded-xl bg-card border border-border text-left tap-highlight-none"
+                >
+                  <img src={e.image} alt={e.title} className="w-14 h-14 rounded-xl object-cover" />
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-semibold text-foreground truncate">{e.title}</p>
+                    <p className="text-xs text-muted-foreground">{e.org.name} · {e.date}</p>
+                  </div>
+                </button>
+              ))}
+            </div>
+          </div>
 
-              {/* Suggested for you */}
-              <div className="px-5 py-2">
-                <div className="flex items-center gap-2 mb-3">
-                  <Sparkles className="w-4 h-4 text-accent" />
-                  <h2 className="text-sm font-bold text-foreground">Suggested for You</h2>
-                </div>
-                <div className="space-y-2">
-                  {events.slice(0, 3).map((e) => (
-                    <button
-                      key={e.id}
-                      onClick={() => navigate(`/event/${e.id}`)}
-                      className="w-full flex items-center gap-3 p-3 rounded-xl bg-card border border-border text-left tap-highlight-none"
-                    >
-                      <img src={e.image} alt={e.title} className="w-14 h-14 rounded-xl object-cover" />
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm font-semibold text-foreground truncate">{e.title}</p>
-                        <p className="text-xs text-muted-foreground">{e.org.name} · {e.date}</p>
-                      </div>
-                    </button>
-                  ))}
-                </div>
-              </div>
+          {/* Clubs you follow */}
+          <div className="px-5 py-4">
+            <div className="flex items-center gap-2 mb-3">
+              <Heart className="w-4 h-4 text-primary" />
+              <h2 className="text-sm font-bold text-foreground">Clubs You Follow</h2>
+            </div>
+            {followedOrgs.length === 0 ? (
+              <EmptyState
+                icon={Heart}
+                title="You haven't followed any clubs yet."
+                description="Open an event and tap Follow on its club to see the club here."
+                action={<Button onClick={() => navigate("/")} className="rounded-xl">Browse events</Button>}
+              />
+            ) : (
+              <OrgRow orgs={followedOrgs} />
+            )}
+          </div>
 
-              {/* Clubs you follow */}
-              <div className="px-5 py-4">
-                <div className="flex items-center gap-2 mb-3">
-                  <Heart className="w-4 h-4 text-primary" />
-                  <h2 className="text-sm font-bold text-foreground">Clubs You Follow</h2>
-                </div>
-                {followedOrgs.length === 0 ? (
-                  <EmptyState
-                    icon={Heart}
-                    title="You haven't followed any clubs yet."
-                    description="Open an event and tap Follow on its club to see the club here."
-                    action={<Button onClick={() => navigate("/")} className="rounded-xl">Browse events</Button>}
-                  />
-                ) : (
-                  <OrgRow orgs={followedOrgs} />
-                )}
-              </div>
-
-              {/* Popular Orgs */}
-              <div className="px-5 py-4">
-                <div className="flex items-center gap-2 mb-3">
-                  <Users className="w-4 h-4 text-primary" />
-                  <h2 className="text-sm font-bold text-foreground">Popular Organizations</h2>
-                </div>
-                {orgs.length === 0 ? (
-                  <p className="py-4 text-sm text-muted-foreground">No organizations to show yet.</p>
-                ) : (
-                  <OrgRow orgs={orgs} />
-                )}
-              </div>
-            </>
-          )}
+          {/* Popular Orgs */}
+          <div className="px-5 py-4">
+            <div className="flex items-center gap-2 mb-3">
+              <Users className="w-4 h-4 text-primary" />
+              <h2 className="text-sm font-bold text-foreground">Popular Organizations</h2>
+            </div>
+            <OrgRow orgs={orgs} />
+          </div>
         </>
       )}
 

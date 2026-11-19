@@ -4,9 +4,10 @@
  * and error states uniformly. Storage failures surface as DataAccessError
  * instead of being silently treated as "no data".
  */
-import { getDatabase, type EventRecord } from "@/data/appDatabase";
+import { createEventRecord, getDatabase, type EventRecord } from "@/data/appDatabase";
 import { getAttendanceSummary, type AttendanceRecord, type AttendanceSummary } from "@/data/attendanceStore";
 import { getReminderEvents } from "@/data/checkInStore";
+import { apiRequest, ApiError, useHttpBackend } from "@/services/httpApi";
 
 export class DataAccessError extends Error {
   constructor(message = "We couldn't load this data.") {
@@ -37,9 +38,20 @@ const run = <T,>(fn: () => T): Promise<T> =>
     }
   });
 
-export const fetchEvents = () => run(() => loadDatabase().events);
+export const fetchEvents = () => useHttpBackend ? apiRequest<EventRecord[]>("/events") : run(() => loadDatabase().events);
 
-export const fetchSavedEvents = () => run(() => loadDatabase().events.filter((e) => e.saved));
+export const fetchEvent = async (id: string): Promise<EventRecord | null> => {
+  if (!useHttpBackend) return run(() => loadDatabase().events.find(event => event.id === id) ?? null);
+  try { return await apiRequest(`/events/${encodeURIComponent(id)}`); }
+  catch (error) { if (error instanceof ApiError && error.status === 404) return null; throw error; }
+};
+
+export const saveNewEvent = (input: Parameters<typeof createEventRecord>[0] & { startsAt?: string; timezone?: string }) =>
+  useHttpBackend ? apiRequest<EventRecord>("/events", { method: "POST", body: JSON.stringify(input) }) : run(() => {
+    // Check the existing data before createEventRecord can reseed corrupt storage.
+    loadDatabase();
+    return createEventRecord(input);
+  });
 
 export const fetchAttendanceForUser = (userId: string | null) =>
   run<AttendanceRecord[]>(() =>

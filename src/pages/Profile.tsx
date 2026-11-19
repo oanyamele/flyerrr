@@ -9,10 +9,12 @@ import { useAsyncData } from "@/hooks/useAsyncData";
 import { fetchUserStats } from "@/data/repository";
 import { ErrorState, StatGridSkeleton } from "@/components/states/DataStates";
 import { useNavigate } from "react-router-dom";
+import { useToast } from "@/hooks/use-toast";
 
 const Profile = () => {
   const { auth, logout } = useAuth();
   const { followedOrgIds } = useFollow();
+  const { toast } = useToast();
   const { theme, toggleTheme } = useTheme();
   const navigate = useNavigate();
   const userId = auth.userId ?? null;
@@ -132,7 +134,9 @@ const Profile = () => {
         <Button
           variant="outline"
           className="w-full rounded-xl text-sm font-semibold text-destructive border-destructive/30"
-          onClick={() => { logout(); navigate("/login"); }}
+          onClick={() => {
+            void logout().then(() => navigate("/login")).catch(() => toast({ title: "Couldn't sign out", description: "Please try again.", variant: "destructive" }));
+          }}
         >
           <LogOut aria-hidden="true" className="w-4 h-4 mr-2" />
           Sign Out

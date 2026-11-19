@@ -9,9 +9,8 @@ import { type EventCategory } from "@/data/mockEvents";
 import { useAuth } from "@/contexts/AuthContext";
 import { useFollow } from "@/contexts/FollowContext";
 import { useTheme } from "@/contexts/ThemeContext";
-import { useLocation, useNavigate } from "react-router-dom";
-import { fetchEvents } from "@/data/repository";
-import { useAsyncData } from "@/hooks/useAsyncData";
+import { useNavigate } from "react-router-dom";
+import { useEvents } from "@/hooks/useEvents";
 import { EmptyState, ErrorState, EventCardSkeleton } from "@/components/states/DataStates";
 
 const Index = () => {
@@ -20,9 +19,8 @@ const Index = () => {
   const { followedOrgIds } = useFollow();
   const { theme, toggleTheme } = useTheme();
   const navigate = useNavigate();
-  const location = useLocation();
-  const query = useAsyncData(fetchEvents, [location.key]);
-  const events = query.status === "success" ? query.data : [];
+  const query = useEvents();
+  const events = query.data ?? [];
 
   const filtered =
     activeCategory === "following"
@@ -75,15 +73,15 @@ const Index = () => {
 
       <WeeklyDigest />
 
-      {query.status === "loading" && <EventCardSkeleton count={3} />}
+      {query.isPending && <EventCardSkeleton count={3} />}
 
-      {query.status === "error" && (
+      {query.isError && (
         <div className="px-5 pt-4">
-          <ErrorState description="We couldn't load the events feed." onRetry={query.retry} />
+          <ErrorState description="We couldn't load the events feed." onRetry={() => void query.refetch()} />
         </div>
       )}
 
-      {query.status === "success" && (
+      {query.isSuccess && (
         <div className="mx-auto max-w-3xl snap-y snap-mandatory pt-2 sm:pt-3">
           {filtered.map((event) => (
             <EventCard key={event.id} event={event} />
@@ -91,7 +89,7 @@ const Index = () => {
         </div>
       )}
 
-      {query.status === "success" && filtered.length === 0 && (
+      {query.isSuccess && filtered.length === 0 && (
         <div className="px-5 pt-4">
           {activeCategory === "following" ? (
             <EmptyState
