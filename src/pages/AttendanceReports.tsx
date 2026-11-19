@@ -1,17 +1,21 @@
-import { useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { ArrowLeft, CalendarDays, Database, Download, Users } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { attendanceRecords, buildAttendanceCsv, getAttendanceSummary } from "@/data/attendanceStore";
+import { useAsyncData } from "@/hooks/useAsyncData";
+import { fetchAttendanceReport } from "@/data/repository";
+import { buildAttendanceCsv } from "@/data/attendanceStore";
+import { EmptyState, ErrorState, ListSkeleton } from "@/components/states/DataStates";
 
 const AttendanceReports = () => {
   const navigate = useNavigate();
-  const summary = useMemo(() => getAttendanceSummary(attendanceRecords), []);
-  const totalCheckIns = attendanceRecords.length;
+  const query = useAsyncData(fetchAttendanceReport);
+  const records = query.status === "success" ? query.data.records : [];
+  const summary = query.status === "success" ? query.data.summary : [];
+  const totalCheckIns = records.length;
   const totalEvents = summary.length;
 
   const downloadCsv = () => {
-    const csv = buildAttendanceCsv(attendanceRecords);
+    const csv = buildAttendanceCsv(records);
     const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
     const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
@@ -40,6 +44,7 @@ const AttendanceReports = () => {
       </header>
 
       <main className="mx-auto w-full max-w-3xl space-y-4 px-4 py-4 sm:px-6">
+        {query.status === "success" && (
         <section className="grid grid-cols-2 gap-3">
           <article className="rounded-2xl border border-border bg-card p-4">
             <Users className="mb-2 h-4 w-4 text-primary" />
@@ -52,7 +57,9 @@ const AttendanceReports = () => {
             <p className="text-xs text-muted-foreground">Events reported</p>
           </article>
         </section>
+        )}
 
+        {query.status === "success" && records.length > 0 && (
         <section className="rounded-2xl border border-border bg-card p-4">
           <div className="mb-3 flex items-start gap-3">
             <div className="rounded-xl bg-primary/10 p-2">
@@ -70,31 +77,48 @@ const AttendanceReports = () => {
             Export Attendance Report (CSV)
           </Button>
         </section>
+        )}
 
-        <section className="space-y-2">
-          {summary.map((event) => (
-            <article key={event.eventId} className="rounded-2xl border border-border bg-card p-4">
-              <p className="truncate text-sm font-bold text-foreground sm:text-base">{event.eventTitle}</p>
-              <p className="text-xs text-muted-foreground">{event.orgName}</p>
-              <div className="mt-3 grid grid-cols-3 gap-2 text-center">
-                <div className="rounded-xl bg-secondary p-2">
-                  <p className="text-base font-bold text-foreground">{event.totalAttendees}</p>
-                  <p className="text-[10px] text-muted-foreground">Attendees</p>
+        {query.status === "loading" && <ListSkeleton rows={3} />}
+
+        {query.status === "error" && (
+          <ErrorState description="We couldn't load attendance records." onRetry={query.retry} />
+        )}
+
+        {query.status === "success" && records.length === 0 && (
+          <EmptyState
+            icon={Database}
+            title="No attendance records yet"
+            description="There are no attendance records to report or export yet."
+          />
+        )}
+
+        {query.status === "success" && records.length > 0 && (
+          <section className="space-y-2">
+            {summary.map((event) => (
+              <article key={event.eventId} className="rounded-2xl border border-border bg-card p-4">
+                <p className="truncate text-sm font-bold text-foreground sm:text-base">{event.eventTitle}</p>
+                <p className="text-xs text-muted-foreground">{event.orgName}</p>
+                <div className="mt-3 grid grid-cols-3 gap-2 text-center">
+                  <div className="rounded-xl bg-secondary p-2">
+                    <p className="text-base font-bold text-foreground">{event.totalAttendees}</p>
+                    <p className="text-[10px] text-muted-foreground">Attendees</p>
+                  </div>
+                  <div className="rounded-xl bg-secondary p-2">
+                    <p className="text-base font-bold text-foreground">{event.avgPointsAwarded}</p>
+                    <p className="text-[10px] text-muted-foreground">Avg points</p>
+                  </div>
+                  <div className="rounded-xl bg-secondary p-2">
+                    <p className="text-[11px] font-semibold text-foreground">
+                      {new Date(event.lastCheckInAt).toLocaleDateString()}
+                    </p>
+                    <p className="text-[10px] text-muted-foreground">Last check-in</p>
+                  </div>
                 </div>
-                <div className="rounded-xl bg-secondary p-2">
-                  <p className="text-base font-bold text-foreground">{event.avgPointsAwarded}</p>
-                  <p className="text-[10px] text-muted-foreground">Avg points</p>
-                </div>
-                <div className="rounded-xl bg-secondary p-2">
-                  <p className="text-[11px] font-semibold text-foreground">
-                    {new Date(event.lastCheckInAt).toLocaleDateString()}
-                  </p>
-                  <p className="text-[10px] text-muted-foreground">Last check-in</p>
-                </div>
-              </div>
-            </article>
-          ))}
-        </section>
+              </article>
+            ))}
+          </section>
+        )}
       </main>
     </div>
   );

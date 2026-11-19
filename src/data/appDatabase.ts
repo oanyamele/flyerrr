@@ -1,4 +1,4 @@
-import { attendanceRecords, type AttendanceRecord } from "@/data/attendanceStore";
+import type { AttendanceRecord } from "@/data/attendanceStore";
 import { mockEvents, mockOrgs, type CampusEvent, type EventCategory, type OrgProfile } from "@/data/mockEvents";
 
 export type UserRole = "student" | "org_officer";
@@ -78,7 +78,7 @@ const defaultDatabase = (): AppDatabase => ({
     },
   ],
   events: mockEvents.map(toSeedEvent),
-  attendance: attendanceRecords,
+  attendance: [],
   verifications: [
     {
       id: "verification-1",

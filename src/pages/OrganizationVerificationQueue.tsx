@@ -2,6 +2,7 @@ import { useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { ArrowLeft, BadgeCheck, Building2, Clock3, FileCheck2, ShieldAlert } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { EmptyState } from "@/components/states/DataStates";
 
 type VerificationStatus = "pending" | "approved" | "rejected";
 
@@ -45,9 +46,9 @@ const initialQueue: VerificationRequest[] = [
   },
 ];
 
-const OrganizationVerificationQueue = () => {
+const OrganizationVerificationQueue = ({ initialRequests = initialQueue }: { initialRequests?: VerificationRequest[] }) => {
   const navigate = useNavigate();
-  const [queue, setQueue] = useState(initialQueue);
+  const [queue, setQueue] = useState(initialRequests);
 
   const pendingCount = useMemo(() => queue.filter((item) => item.status === "pending").length, [queue]);
 
@@ -72,6 +73,9 @@ const OrganizationVerificationQueue = () => {
       </header>
 
       <main className="mx-auto w-full max-w-3xl space-y-3 px-4 py-4 sm:px-6">
+        {queue.length === 0 && (
+          <EmptyState icon={FileCheck2} title="No verification requests" description="New organization requests will appear here for review." />
+        )}
         {queue.map((item) => (
           <article key={item.id} className="rounded-2xl border border-border bg-card p-4 shadow-sm">
             <div className="mb-3 flex items-start justify-between gap-3">

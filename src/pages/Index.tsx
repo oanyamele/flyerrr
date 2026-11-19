@@ -1,5 +1,6 @@
 import { useState } from "react";
-import { Bell, Moon, Plus, Send, Sun } from "lucide-react";
+import { Bell, CalendarDays, Moon, Plus, Send, Sun } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import CategoryFilter from "@/components/CategoryFilter";
 import EventCard from "@/components/EventCard";
 import WeeklyDigest from "@/components/WeeklyDigest";
@@ -10,7 +11,7 @@ import { useFollow } from "@/contexts/FollowContext";
 import { useTheme } from "@/contexts/ThemeContext";
 import { useNavigate } from "react-router-dom";
 import { useEvents } from "@/hooks/useEvents";
-import { ErrorState, EventCardSkeleton } from "@/components/states/DataStates";
+import { EmptyState, ErrorState, EventCardSkeleton } from "@/components/states/DataStates";
 
 const Index = () => {
   const [activeCategory, setActiveCategory] = useState<EventCategory | "all" | "following">("all");
@@ -72,24 +73,42 @@ const Index = () => {
 
       <WeeklyDigest />
 
-      {query.isPending && <EventCardSkeleton />}
+      {query.isPending && <EventCardSkeleton count={3} />}
+
       {query.isError && (
-        <div className="mx-auto max-w-3xl px-4 py-4">
-          <ErrorState description="We couldn't load events." onRetry={() => void query.refetch()} />
+        <div className="px-5 pt-4">
+          <ErrorState description="We couldn't load the events feed." onRetry={() => void query.refetch()} />
         </div>
       )}
-      <div className="mx-auto max-w-3xl snap-y snap-mandatory pt-2 sm:pt-3">
-        {filtered.map((event) => (
-          <EventCard key={event.id} event={event} />
-        ))}
-      </div>
+
+      {query.isSuccess && (
+        <div className="mx-auto max-w-3xl snap-y snap-mandatory pt-2 sm:pt-3">
+          {filtered.map((event) => (
+            <EventCard key={event.id} event={event} />
+          ))}
+        </div>
+      )}
 
       {query.isSuccess && filtered.length === 0 && (
-        <div className="flex flex-col items-center justify-center py-20 text-muted-foreground">
-          <p className="text-lg font-semibold">No events found</p>
-          <p className="text-sm">
-            {activeCategory === "following" ? "Follow organizations to see their events here" : "Try a different category"}
-          </p>
+        <div className="px-5 pt-4">
+          {activeCategory === "following" ? (
+            <EmptyState
+              icon={CalendarDays}
+              title={followedOrgIds.length === 0 ? "You haven't followed any clubs yet." : "No events from your organizations"}
+              description={followedOrgIds.length === 0 ? "Follow clubs on Explore to see their events here." : "The clubs you follow haven't posted any events yet."}
+              action={
+                <Button onClick={() => navigate("/explore")} className="rounded-xl">
+                  Explore organizations
+                </Button>
+              }
+            />
+          ) : (
+            <EmptyState
+              icon={CalendarDays}
+              title={events.length === 0 ? "No events available yet." : "No events in this category"}
+              description={events.length === 0 ? "Check back soon — campus events will show up here." : "Try a different category."}
+            />
+          )}
         </div>
       )}
 
