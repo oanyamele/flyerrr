@@ -1,7 +1,7 @@
-import { Heart, Bookmark, Share2, MapPin, Clock, Users } from "lucide-react";
+import { Share2, MapPin, Clock, Users } from "lucide-react";
 import { motion } from "framer-motion";
-import { useState } from "react";
 import type { CampusEvent } from "@/data/mockEvents";
+import SaveEventButton from "@/components/SaveEventButton";
 import { Badge } from "@/components/ui/badge";
 import { useFollow } from "@/contexts/FollowContext";
 import { useNavigate } from "react-router-dom";
@@ -12,8 +12,6 @@ interface EventCardProps {
 }
 
 const EventCard = ({ event, onOpenDetail }: EventCardProps) => {
-  const [liked, setLiked] = useState(false);
-  const [saved, setSaved] = useState(event.saved);
   const { isFollowing, toggleFollow } = useFollow();
   const navigate = useNavigate();
   const attendancePercent = Math.round((event.attendees / event.capacity) * 100);
@@ -47,7 +45,7 @@ const EventCard = ({ event, onOpenDetail }: EventCardProps) => {
       className="relative mx-auto mb-3 w-[calc(100%-1rem)] max-w-xl snap-start overflow-hidden rounded-[12px] border border-border bg-card shadow-md sm:mb-4 sm:w-[calc(100%-2rem)]"
       onClick={openEvent}
       onKeyDown={(e) => {
-        if (e.key === "Enter" || e.key === " ") {
+        if (e.target === e.currentTarget && (e.key === "Enter" || e.key === " ")) {
           e.preventDefault();
           openEvent();
         }
@@ -62,30 +60,7 @@ const EventCard = ({ event, onOpenDetail }: EventCardProps) => {
 
         {/* Right Side Actions */}
         <div className="absolute right-3 top-1/2 flex -translate-y-1/2 flex-col items-center gap-4 sm:right-4">
-          <button
-            type="button"
-            aria-label={liked ? "Unlike event" : "Like event"}
-            aria-pressed={liked}
-            onClick={(e) => { e.stopPropagation(); setLiked(!liked); }}
-            className="flex flex-col items-center gap-1 rounded-full bg-background/80 px-2 py-1.5 tap-highlight-none"
-          >
-            <motion.div whileTap={{ scale: 1.3 }}>
-              <Heart aria-hidden="true" className={`h-6 w-6 sm:h-7 sm:w-7 ${liked ? "fill-primary text-primary" : "text-foreground"}`} />
-            </motion.div>
-            <span className="text-[10px] font-medium text-foreground">Like</span>
-          </button>
-          <button
-            type="button"
-            aria-label={saved ? "Unsave event" : "Save event"}
-            aria-pressed={saved}
-            onClick={(e) => { e.stopPropagation(); setSaved(!saved); }}
-            className="flex flex-col items-center gap-1 rounded-full bg-background/80 px-2 py-1.5 tap-highlight-none"
-          >
-            <motion.div whileTap={{ scale: 1.3 }}>
-              <Bookmark aria-hidden="true" className={`h-6 w-6 sm:h-7 sm:w-7 ${saved ? "fill-primary text-primary" : "text-foreground"}`} />
-            </motion.div>
-            <span className="text-[10px] font-medium text-foreground">Save</span>
-          </button>
+          <SaveEventButton eventId={event.id} showLabel className="flex flex-col items-center gap-1 rounded-full bg-background/80 px-2 py-1.5 tap-highlight-none" />
           <button
             type="button"
             aria-label="Share event"

@@ -3,13 +3,13 @@ import { useNavigate } from "react-router-dom";
 import BottomNav from "@/components/BottomNav";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { useAsyncData } from "@/hooks/useAsyncData";
-import { fetchSavedEvents } from "@/data/repository";
+import { useBookmarks } from "@/hooks/useBookmarks";
+import SaveEventButton from "@/components/SaveEventButton";
 import { EmptyState, ErrorState, ListSkeleton } from "@/components/states/DataStates";
 
 const Saved = () => {
   const navigate = useNavigate();
-  const query = useAsyncData(fetchSavedEvents);
+  const query = useBookmarks();
 
   return (
     <div className="min-h-screen bg-background pb-24">
@@ -23,8 +23,8 @@ const Saved = () => {
       </header>
 
       <div className="px-5">
-        {query.status === "loading" && <ListSkeleton rows={4} />}
-        {query.status === "error" && <ErrorState description="We couldn't load your saved events." onRetry={query.retry} />}
+        {query.isPending && <ListSkeleton rows={4} />}
+        {query.status === "error" && <ErrorState description="We couldn't load your saved events." onRetry={() => void query.refetch()} />}
         {query.status === "success" && query.data.length === 0 && (
           <EmptyState
             icon={Bookmark}
@@ -36,19 +36,20 @@ const Saved = () => {
         {query.status === "success" && query.data.length > 0 && (
           <div className="space-y-3">
             {query.data.map((e) => (
-              <button
+              <div
                 key={e.id}
-                onClick={() => navigate(`/event/${e.id}`)}
                 className="w-full flex items-center gap-3 p-3 rounded-2xl bg-card border border-border text-left tap-highlight-none"
               >
+                <button type="button" onClick={() => navigate(`/event/${e.id}`)} className="flex min-w-0 flex-1 items-center gap-3 text-left">
                 <img src={e.image} alt={e.title} className="w-16 h-16 rounded-xl object-cover" />
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-bold text-foreground truncate">{e.title}</p>
                   <p className="text-xs text-muted-foreground">{e.org.name}</p>
                   <p className="text-xs text-muted-foreground">{e.date} · {e.time}</p>
                 </div>
-                <Bookmark className="w-5 h-5 text-primary fill-primary flex-shrink-0" />
-              </button>
+                </button>
+                <SaveEventButton eventId={e.id} className="rounded-full p-3" />
+              </div>
             ))}
           </div>
         )}
