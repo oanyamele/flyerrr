@@ -1,11 +1,12 @@
 import type { EventRecord } from "./appDatabase";
 import { getDatabase } from "./appDatabase";
 import { apiRequest, useHttpBackend } from "@/services/httpApi";
+import { STORAGE_KEYS, readStringOrThrow, writeJson } from "@/lib/storage";
 
-const KEY = "flyerrr_bookmarks_v1";
+const KEY = STORAGE_KEYS.bookmarks;
 
 const readBookmarks = (): Record<string, string[]> => {
-  const value: unknown = JSON.parse(localStorage.getItem(KEY) ?? "{}");
+  const value: unknown = JSON.parse(readStringOrThrow(KEY) ?? "{}");
   if (!value || typeof value !== "object" || Array.isArray(value) ||
       Object.values(value).some(ids => !Array.isArray(ids) || ids.some(id => typeof id !== "string"))) {
     throw new Error("Saved event data could not be read.");
@@ -28,5 +29,5 @@ export const setBookmark = async (userId: string | undefined, eventId: string, s
   const ids = new Set(all[userId] ?? []);
   if (saved) ids.add(eventId); else ids.delete(eventId);
   // A failed write remains an error. Never report an unpersisted save as success.
-  localStorage.setItem(KEY, JSON.stringify({ ...all, [userId]: [...ids] }));
+  writeJson(KEY, { ...all, [userId]: [...ids] });
 };

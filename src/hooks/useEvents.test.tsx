@@ -4,6 +4,7 @@ import { act, cleanup, renderHook, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { useCreateEvent, useEvents } from "./useEvents";
 import { AuthProvider } from "@/contexts/AuthContext";
+import { STORAGE_KEYS } from "@/lib/storage";
 
 const eventInput = {
   title: "Officer-published career workshop",
@@ -49,10 +50,10 @@ describe("event queries", () => {
   });
 
   it("surfaces an unreadable repository as an error without overwriting it", async () => {
-    localStorage.setItem("flyer_db_v1", "{invalid");
+    localStorage.setItem(STORAGE_KEYS.database, "{invalid");
     const { result } = renderHook(() => useEvents(), { wrapper });
 
     await waitFor(() => expect(result.current.isError).toBe(true));
-    expect(localStorage.getItem("flyer_db_v1")).toBe("{invalid");
+    expect(localStorage.getItem(STORAGE_KEYS.database)).toBe("{invalid");
   });
 });

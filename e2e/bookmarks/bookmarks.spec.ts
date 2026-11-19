@@ -46,7 +46,7 @@ test("officer publish, live search, save/reload/unsave, and account isolation", 
   await alice.goto("/profile");
   await alice.getByRole("button", { name: "Sign Out" }).click();
   await expect(alice).toHaveURL(/\/login$/);
-  await alice.evaluate(() => localStorage.setItem("flyerrr_auth", JSON.stringify({ isLoggedIn: true, userId: "forged-officer", role: "org_officer", userName: "Forged" })));
+  await alice.evaluate(() => localStorage.setItem("flyerrr_auth_v1", JSON.stringify({ isLoggedIn: true, userId: "forged-officer", role: "org_officer", userName: "Forged" })));
   await alice.goto("/create-event");
   await expect(alice).toHaveURL(/\/login$/);
   // Same browser, different account: neither cached nor stored saves may leak.

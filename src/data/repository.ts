@@ -7,6 +7,7 @@
 import { createEventRecord, getDatabase, type EventRecord } from "@/data/appDatabase";
 import { getAttendanceSummary, type AttendanceRecord, type AttendanceSummary } from "@/data/attendanceStore";
 import { getReminderEvents } from "@/data/checkInStore";
+import { STORAGE_KEYS, readString } from "@/lib/storage";
 import { apiRequest, ApiError, useHttpBackend } from "@/services/httpApi";
 
 export class DataAccessError extends Error {
@@ -16,12 +17,10 @@ export class DataAccessError extends Error {
   }
 }
 
-const DB_KEY = "flyer_db_v1";
-
 /** Fails loudly when stored data is unreadable, rather than reseeding over it. */
 const loadDatabase = () => {
   try {
-    const raw = localStorage.getItem(DB_KEY);
+    const raw = readString(STORAGE_KEYS.database);
     if (raw) JSON.parse(raw);
     return getDatabase();
   } catch {
