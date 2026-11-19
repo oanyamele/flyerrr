@@ -3,6 +3,7 @@ import { fireEvent, render, screen } from "@testing-library/react";
 import { MemoryRouter, Route, Routes, useNavigate } from "react-router-dom";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { FollowProvider } from "@/contexts/FollowContext";
+import { RepositoryProvider } from "@/repositories/RepositoryProvider";
 import EventDetail from "@/pages/EventDetail";
 
 const GoToMissingEvent = () => {
@@ -17,6 +18,7 @@ const GoToMissingEvent = () => {
 const renderEventRoute = (initialPath: string) =>
   render(
     <MemoryRouter initialEntries={[initialPath]}>
+      <RepositoryProvider>
       <AuthProvider>
         <FollowProvider>
           <Routes>
@@ -32,6 +34,7 @@ const renderEventRoute = (initialPath: string) =>
           </Routes>
         </FollowProvider>
       </AuthProvider>
+      </RepositoryProvider>
     </MemoryRouter>,
   );
 

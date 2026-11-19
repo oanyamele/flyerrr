@@ -7,6 +7,7 @@ import { AuthProvider } from "@/contexts/AuthContext";
 import { useAuth } from "@/hooks/useAuth";
 import { ThemeProvider } from "@/contexts/ThemeContext";
 import { FollowProvider } from "@/contexts/FollowContext";
+import { RepositoryProvider } from "@/repositories/RepositoryProvider";
 import Index from "./pages/Index";
 import EventDetail from "./pages/EventDetail";
 import Explore from "./pages/Explore";
@@ -65,18 +66,20 @@ const App = () => (
   <QueryClientProvider client={queryClient}>
     <ThemeProvider>
       <AuthProvider>
-        <FollowProvider>
-          <TooltipProvider>
-            <Toaster />
-            <Sonner />
-            <BrowserRouter>
-              <Routes>
-                <Route path="/login" element={<Login />} />
-                <Route path="/*" element={<ProtectedRoutes />} />
-              </Routes>
-            </BrowserRouter>
-          </TooltipProvider>
-        </FollowProvider>
+        <RepositoryProvider>
+          <FollowProvider>
+            <TooltipProvider>
+              <Toaster />
+              <Sonner />
+              <BrowserRouter>
+                <Routes>
+                  <Route path="/login" element={<Login />} />
+                  <Route path="/*" element={<ProtectedRoutes />} />
+                </Routes>
+              </BrowserRouter>
+            </TooltipProvider>
+          </FollowProvider>
+        </RepositoryProvider>
       </AuthProvider>
     </ThemeProvider>
   </QueryClientProvider>

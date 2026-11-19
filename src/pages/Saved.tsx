@@ -1,11 +1,12 @@
 import { Bookmark } from "lucide-react";
-import { mockEvents } from "@/data/mockEvents";
+import { useRepositories } from "@/repositories/useRepositories";
 import { useNavigate } from "react-router-dom";
 import BottomNav from "@/components/BottomNav";
 
 const Saved = () => {
   const navigate = useNavigate();
-  const savedEvents = mockEvents.filter((e) => e.saved);
+  const { events } = useRepositories();
+  const savedEvents = events.listCatalog().filter((e) => e.saved);
 
   return (
     <div className="min-h-screen bg-background pb-24">

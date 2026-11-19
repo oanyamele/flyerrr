@@ -4,25 +4,26 @@ import CategoryFilter from "@/components/CategoryFilter";
 import EventCard from "@/components/EventCard";
 import WeeklyDigest from "@/components/WeeklyDigest";
 import BottomNav from "@/components/BottomNav";
-import { type EventCategory } from "@/data/mockEvents";
+import { type EventCategory } from "@/repositories/types";
 import { useAuth } from "@/hooks/useAuth";
 import { useFollow } from "@/contexts/FollowContext";
 import { useTheme } from "@/contexts/ThemeContext";
 import { useLocation, useNavigate } from "react-router-dom";
-import { listEventRecords } from "@/data/appDatabase";
+import { useRepositories } from "@/repositories/useRepositories";
 
 const Index = () => {
   const [activeCategory, setActiveCategory] = useState<EventCategory | "all" | "following">("all");
   const { auth } = useAuth();
+  const { events: eventRepository } = useRepositories();
   const { followedOrgIds } = useFollow();
   const { theme, toggleTheme } = useTheme();
   const navigate = useNavigate();
   const location = useLocation();
-  const [events, setEvents] = useState(() => listEventRecords());
+  const [events, setEvents] = useState(() => eventRepository.listEvents());
 
   useEffect(() => {
-    setEvents(listEventRecords());
-  }, [location.key]);
+    setEvents(eventRepository.listEvents());
+  }, [location.key, eventRepository]);
 
   const filtered =
     activeCategory === "following"

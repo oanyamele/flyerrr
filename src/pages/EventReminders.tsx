@@ -1,23 +1,23 @@
 import { ArrowLeft, BellRing, CalendarClock, MapPin } from "lucide-react";
 import { useNavigate } from "react-router-dom";
-import { listEventRecords } from "@/data/appDatabase";
 import { useAuth } from "@/hooks/useAuth";
-import { getReminderEvents, getReminderMapForUser, setReminderEnabled } from "@/data/checkInStore";
-import { useMemo, useState } from "react";
+import { useRepositories } from "@/repositories/useRepositories";
+import { useState } from "react";
 import { Switch } from "@/components/ui/switch";
 
 const EventReminders = () => {
   const navigate = useNavigate();
   const { auth } = useAuth();
-  const events = listEventRecords();
+  const { events: eventRepository, attendance } = useRepositories();
+  const events = eventRepository.listEvents();
   const userId = auth.userId ?? "guest";
-  const [reminderMap, setReminderMap] = useState(() => getReminderMapForUser(userId));
-  const reminders = useMemo(() => getReminderEvents(events, userId).slice(0, 8), [events, userId, reminderMap]);
+  const [reminderMap, setReminderMap] = useState(() => attendance.reminderMapForUser(userId));
+  const reminders = attendance.reminderEvents(events, userId).slice(0, 8);
 
   const toggleReminder = (eventId: string) => {
     const current = reminderMap[eventId] !== false;
     const next = !current;
-    setReminderEnabled(eventId, userId, next);
+    void attendance.setReminderEnabled(eventId, userId, next);
     setReminderMap((prev) => ({ ...prev, [eventId]: next }));
   };
 

@@ -3,8 +3,8 @@ import { CheckCircle2, QrCode, ScanLine, Smartphone, Wifi } from "lucide-react";
 import { motion } from "framer-motion";
 import BottomNav from "@/components/BottomNav";
 import { useAuth } from "@/hooks/useAuth";
-import { listEventRecords } from "@/data/appDatabase";
-import { issueDynamicCheckInToken, secondsRemaining, validateCheckInToken } from "@/data/checkInStore";
+import { secondsRemaining } from "@/lib/secondsRemaining";
+import { useRepositories } from "@/repositories/useRepositories";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -13,7 +13,8 @@ import CheckInQr from "@/components/CheckInQr";
 const TapIn = () => {
   const { auth } = useAuth();
   const { toast } = useToast();
-  const events = listEventRecords();
+  const { events: eventRepository, attendance } = useRepositories();
+  const events = eventRepository.listEvents();
   const [selectedEventId, setSelectedEventId] = useState(events[0]?.id ?? "");
   const [scannedToken, setScannedToken] = useState("");
   const [confirmationText, setConfirmationText] = useState("");
@@ -31,9 +32,9 @@ const TapIn = () => {
 
   const showConfirmation = (message: string) => setConfirmationText(message);
 
-  const handleScannerSubmit = () => {
-    const result = validateCheckInToken(scannedToken.trim());
-    if (!result.ok) {
+  const handleScannerSubmit = async () => {
+    const result = await attendance.validateCheckInToken(scannedToken.trim());
+    if (result.ok === false) {
       toast({ title: "Scan rejected", description: result.reason, variant: "destructive" });
       return;
     }
@@ -46,9 +47,10 @@ const TapIn = () => {
     if (!qrOpen || !auth.userId || !selectedEvent) return;
 
     const refreshToken = () => {
-      const issued = issueDynamicCheckInToken(selectedEvent.id, auth.userId);
-      setToken(issued.token);
-      setExpiresAt(issued.expiresAt);
+      void attendance.issueCheckInToken(selectedEvent.id, auth.userId).then((issued) => {
+        setToken(issued.token);
+        setExpiresAt(issued.expiresAt);
+      });
     };
 
     refreshToken();
@@ -59,7 +61,7 @@ const TapIn = () => {
       window.clearInterval(refreshInterval);
       window.clearInterval(secondTick);
     };
-  }, [qrOpen, auth.userId, selectedEvent]);
+  }, [qrOpen, auth.userId, selectedEvent, attendance]);
 
   return (
     <div className="min-h-screen bg-background flex flex-col pb-24">

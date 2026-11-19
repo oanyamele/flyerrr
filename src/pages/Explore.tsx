@@ -1,16 +1,19 @@
 import { Search as SearchIcon, TrendingUp, Users, Sparkles } from "lucide-react";
 import { useState } from "react";
 import { Input } from "@/components/ui/input";
-import { mockOrgs, mockEvents } from "@/data/mockEvents";
+import { useRepositories } from "@/repositories/useRepositories";
 import { useNavigate } from "react-router-dom";
 import BottomNav from "@/components/BottomNav";
 
 const Explore = () => {
   const [search, setSearch] = useState("");
   const navigate = useNavigate();
+  const { events } = useRepositories();
+  const catalog = events.listCatalog();
+  const organizations = events.listOrganizations();
 
   const filteredEvents = search
-    ? mockEvents.filter(
+    ? catalog.filter(
         (e) =>
           e.title.toLowerCase().includes(search.toLowerCase()) ||
           e.org.name.toLowerCase().includes(search.toLowerCase()) ||
@@ -82,7 +85,7 @@ const Explore = () => {
               <h2 className="text-sm font-bold text-foreground">Suggested for You</h2>
             </div>
             <div className="space-y-2">
-              {mockEvents.slice(0, 3).map((e) => (
+              {catalog.slice(0, 3).map((e) => (
                 <button
                   key={e.id}
                   onClick={() => navigate(`/event/${e.id}`)}
@@ -105,7 +108,7 @@ const Explore = () => {
               <h2 className="text-sm font-bold text-foreground">Popular Organizations</h2>
             </div>
             <div className="flex gap-3 overflow-x-auto scrollbar-hide pb-2">
-              {mockOrgs.map((org) => (
+              {organizations.map((org) => (
                 <div key={org.id} className="flex flex-col items-center gap-2 min-w-[80px]">
                   <div className="w-16 h-16 rounded-2xl bg-primary/10 flex items-center justify-center text-lg font-bold text-primary">
                     {org.avatar}

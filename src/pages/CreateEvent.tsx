@@ -6,9 +6,9 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import BottomNav from "@/components/BottomNav";
 import { useToast } from "@/hooks/use-toast";
-import { createEventRecord } from "@/data/appDatabase";
 import { useAuth } from "@/hooks/useAuth";
-import type { EventCategory } from "@/data/mockEvents";
+import type { EventCategory } from "@/repositories/types";
+import { useRepositories } from "@/repositories/useRepositories";
 
 const CATEGORY_OPTIONS = [
   { value: "social", label: "Social" },
@@ -22,6 +22,7 @@ const CreateEvent = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const { auth } = useAuth();
+  const { events } = useRepositories();
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [location, setLocation] = useState("");
@@ -41,10 +42,10 @@ const CreateEvent = () => {
     }
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      const createdEvent = createEventRecord({
+      const createdEvent = await events.createEvent({
         title,
         description,
         image: imagePreview ?? "https://images.unsplash.com/photo-1523580846011-d3a5bc25702b?auto=format&fit=crop&w=1200&q=80",

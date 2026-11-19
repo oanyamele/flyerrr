@@ -6,16 +6,17 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useFollow } from "@/contexts/FollowContext";
 import BottomNav from "@/components/BottomNav";
-import { listEventRecords } from "@/data/appDatabase";
 import CheckInQr from "@/components/CheckInQr";
 import { useAuth } from "@/hooks/useAuth";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { isRsvped, issueDynamicCheckInToken, secondsRemaining, toggleRsvp } from "@/data/checkInStore";
+import { secondsRemaining } from "@/lib/secondsRemaining";
+import { useRepositories } from "@/repositories/useRepositories";
 
 const EventDetail = () => {
   const { id } = useParams();
   const navigate = useNavigate();
-  const event = listEventRecords().find((e) => e.id === id);
+  const { events, attendance } = useRepositories();
+  const event = events.listEvents().find((e) => e.id === id);
   const { auth } = useAuth();
   const [rsvp, setRsvp] = useState(false);
   const [qrOpen, setQrOpen] = useState(false);
@@ -26,16 +27,17 @@ const EventDetail = () => {
 
   useEffect(() => {
     if (!auth.userId || !event) return;
-    setRsvp(isRsvped(event.id, auth.userId));
-  }, [auth.userId, event]);
+    setRsvp(attendance.isRsvped(event.id, auth.userId));
+  }, [auth.userId, event, attendance]);
 
   useEffect(() => {
     if (!qrOpen || !auth.userId || !event) return;
 
     const refreshToken = () => {
-      const issued = issueDynamicCheckInToken(event.id, auth.userId);
-      setToken(issued.token);
-      setExpiresAt(issued.expiresAt);
+      void attendance.issueCheckInToken(event.id, auth.userId).then((issued) => {
+        setToken(issued.token);
+        setExpiresAt(issued.expiresAt);
+      });
     };
 
     refreshToken();
@@ -46,7 +48,7 @@ const EventDetail = () => {
       window.clearInterval(refreshInterval);
       window.clearInterval(secondTick);
     };
-  }, [qrOpen, auth.userId, event]);
+  }, [qrOpen, auth.userId, event, attendance]);
 
   if (!event) {
     return (
@@ -184,8 +186,7 @@ const EventDetail = () => {
           <Button
             onClick={() => {
               if (!auth.userId || !event) return;
-              const next = toggleRsvp(event.id, auth.userId);
-              setRsvp(next);
+              void attendance.toggleRsvp(event.id, auth.userId).then(setRsvp);
             }}
             className={`w-full h-12 rounded-2xl text-base font-bold transition-all ${
               rsvp ? "bg-success text-success-foreground" : ""
