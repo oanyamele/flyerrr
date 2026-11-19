@@ -1,5 +1,5 @@
-import { authenticateUser, createEventRecord, createUser, listEventRecords } from "@/data/appDatabase";
-import { attendanceRecords, buildAttendanceCsv, getAttendanceSummary } from "@/data/attendanceStore";
+import { authenticateUser, createEventRecord, createUser, getDatabase, listEventRecords } from "@/data/appDatabase";
+import { buildAttendanceCsv, getAttendanceSummary } from "@/data/attendanceStore";
 import {
   getReminderEvents,
   getReminderMapForUser,
@@ -46,15 +46,15 @@ export class LocalStorageRepository implements UserRepository, EventRepository, 
   }
 
   listAttendance() {
-    return attendanceRecords;
+    return getDatabase().attendance;
   }
 
   summarizeAttendance() {
-    return getAttendanceSummary(attendanceRecords);
+    return getAttendanceSummary(getDatabase().attendance);
   }
 
   exportAttendanceCsv() {
-    return buildAttendanceCsv(attendanceRecords);
+    return buildAttendanceCsv(getDatabase().attendance);
   }
 
   isRsvped(eventId: string, userId: string) {

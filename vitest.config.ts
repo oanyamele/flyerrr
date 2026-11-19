@@ -9,6 +9,15 @@ export default defineConfig({
     globals: true,
     setupFiles: ["./src/test/setup.ts"],
     include: ["src/**/*.{test,spec}.{ts,tsx}"],
+    coverage: {
+      provider: "v8",
+      reporter: ["text", "text-summary"],
+      include: ["src/data/**/*.ts"],
+      exclude: ["src/data/**/*.test.ts"],
+      thresholds: {
+        lines: 60,
+      },
+    },
   },
   resolve: {
     alias: { "@": path.resolve(__dirname, "./src") },

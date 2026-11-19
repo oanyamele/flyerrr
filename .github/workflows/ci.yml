@@ -55,6 +55,7 @@ jobs:
         run: npx eslint .
 
       - name: Test
+        # Fails when line coverage of src/data drops below 60%.
         run: npm test
 
       - name: API integration tests

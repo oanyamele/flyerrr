@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it } from "vitest";
 import { repositoryMode } from "@/repositories/config";
 import type { AttendanceRepository, EventRepository, UserRepository } from "@/repositories/contracts";
 import { HttpRepository } from "@/repositories/httpRepository";
+import type { EventRecord } from "@/data/appDatabase";
 import { LocalStorageRepository } from "@/repositories/localStorageRepository";
 import { openHttpRepositories } from "@/repositories/openRepositories";
 
@@ -104,6 +105,17 @@ describe("LocalStorageRepository", () => {
     expect(attendance.summarizeAttendance()[0]?.eventTitle).toBeTruthy();
     expect(attendance.exportAttendanceCsv()).toContain("record_id");
   });
+
+  it("issues a check-in token and turns a reminder off", async () => {
+    expect(events.listCatalog().some((event) => event.title === "Welcome Week Block Party")).toBe(true);
+    const issued = await attendance.issueCheckInToken("1", "user-student-1");
+    const validated = await attendance.validateCheckInToken(issued.token);
+    expect(validated).toEqual({ ok: true, eventId: "1", userId: "user-student-1" });
+
+    await attendance.toggleRsvp("2", "user-student-1");
+    await attendance.setReminderEnabled("2", "user-student-1", false);
+    expect(attendance.reminderEvents(events.listEvents(), "user-student-1")).toEqual([]);
+  });
 });
 
 describe("HttpRepository", () => {
@@ -145,5 +157,93 @@ describe("HttpRepository", () => {
     });
     expect(signedIn.ok).toBe(true);
     expect(localStorage.getItem("flyer_db_v1")).toContain("student@howard.edu");
+  });
+
+  it("sends writes to the API and updates the cache", async () => {
+    const routes: Record<string, unknown> = {
+      "/events": [],
+      "/organizations": [],
+      "/attendance": [{ id: "a1", eventTitle: 'Say "hi"' }],
+      "/rsvps": [{ eventId: "api-1", userId: "user-1" }],
+      "/reminders": {},
+    };
+    const fetchImpl: typeof fetch = async (input, init) => {
+      const path = new URL(String(input)).pathname;
+      if (init?.method === "POST") {
+        const body = JSON.parse(String(init.body)) as { eventId?: string };
+        if (path === "/users") return jsonResponse({ ok: true, user: { id: "u2", name: "New" } });
+        if (path === "/sessions") return jsonResponse("nope", 500);
+        if (path === "/events") return jsonResponse({ id: "posted", title: "Posted" });
+        if (path === "/rsvps/toggle") return jsonResponse({ rsvped: body.eventId === "on" });
+        if (path === "/reminders") return jsonResponse({});
+        if (path === "/check-in/tokens") return jsonResponse({ token: "tok", expiresAt: 5 });
+        if (path === "/check-in/validate") return jsonResponse({ ok: true, eventId: "1", userId: "u" });
+        return jsonResponse({ error: "missing" }, 404);
+      }
+      const body = routes[path];
+      if (!body) return jsonResponse({ error: "missing" }, 500);
+      return jsonResponse(body);
+    };
+
+    const http = new HttpRepository("http://api.test", fetchImpl);
+    await http.load();
+    expect((await http.createUser({ email: "a@howard.edu", password: "pw", name: "A", role: "student" })).ok).toBe(true);
+    expect(await http.authenticateUser({ email: "a@howard.edu", password: "pw", role: "student" })).toEqual({
+      ok: false,
+      error: "Could not sign in.",
+    });
+
+    const created = await http.createEvent({
+      title: "Posted",
+      description: "From the API",
+      image: "/flyers/lab.png",
+      category: "academic",
+      date: "Fri, Oct 3",
+      time: "6:00 PM",
+      location: "iLab",
+      capacity: 10,
+      tags: [],
+      creatorName: "Officer",
+      creatorRole: "org_officer",
+    });
+    expect(http.listEvents()[0]?.id).toBe(created.id);
+    expect(http.listCatalog()[0]?.id).toBe(created.id);
+    expect(http.exportAttendanceCsv()).toContain('Say ""hi""');
+
+    expect(await http.toggleRsvp("on", "user-1")).toBe(true);
+    expect(http.isRsvped("on", "user-1")).toBe(true);
+    expect(await http.toggleRsvp("api-1", "user-1")).toBe(false);
+    expect(http.isRsvped("api-1", "user-1")).toBe(false);
+
+    await http.setReminderEnabled("on", "user-1", false);
+    expect(http.reminderMapForUser("user-1").on).toBe(false);
+    expect(http.reminderEvents([{ id: "on" } as EventRecord], "user-1")).toEqual([]);
+    expect(await http.issueCheckInToken("1", "u")).toEqual({ token: "tok", expiresAt: 5 });
+    expect(await http.validateCheckInToken("tok")).toEqual({ ok: true, eventId: "1", userId: "u" });
+  });
+
+  it("reports a failed read and a failed write", async () => {
+    const failing: typeof fetch = async () => jsonResponse({ error: "down" }, 503);
+    await expect(new HttpRepository("http://api.test", failing).load()).rejects.toThrow("GET /events failed (503)");
+
+    const http = new HttpRepository("http://api.test", async (...args) => {
+      const init = args[1];
+      if (init?.method === "POST") return jsonResponse({ error: "no" }, 500);
+      return jsonResponse([]);
+    });
+    await http.load();
+    await expect(http.createEvent({
+      title: "Nope",
+      description: "Fails",
+      image: "/x.png",
+      category: "social",
+      date: "Fri",
+      time: "1:00 PM",
+      location: "Quad",
+      capacity: 1,
+      tags: [],
+      creatorName: "Officer",
+      creatorRole: "org_officer",
+    })).rejects.toThrow("POST /events failed (500)");
   });
 });
