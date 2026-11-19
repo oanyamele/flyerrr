@@ -20,7 +20,7 @@ describe("storage", () => {
 
   it("uses one prefix and a schema version on every key", () => {
     const keys = Object.values(STORAGE_KEYS);
-    expect(keys).toHaveLength(7);
+    expect(keys).toHaveLength(8);
     for (const key of keys) expect(key).toMatch(/^flyerrr_[a-z_]+_v\d+$/);
     expect(new Set(keys).size).toBe(keys.length);
   });

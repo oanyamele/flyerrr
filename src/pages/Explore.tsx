@@ -1,20 +1,25 @@
 import { Search as SearchIcon, TrendingUp, Users, Sparkles } from "lucide-react";
 import { useState } from "react";
 import { Input } from "@/components/ui/input";
-import { mockOrgs, mockEvents } from "@/data/mockEvents";
+import { mockOrgs } from "@/data/mockEvents";
 import { useNavigate } from "react-router-dom";
 import BottomNav from "@/components/BottomNav";
+import { ErrorState, ListSkeleton } from "@/components/states/DataStates";
+import { useEvents } from "@/hooks/useEvents";
 
 const Explore = () => {
   const [search, setSearch] = useState("");
   const navigate = useNavigate();
 
-  const filteredEvents = search
-    ? mockEvents.filter(
+  const query = useEvents();
+  const events = query.data ?? [];
+  const searchTerm = search.trim().toLowerCase();
+  const filteredEvents = searchTerm
+    ? events.filter(
         (e) =>
-          e.title.toLowerCase().includes(search.toLowerCase()) ||
-          e.org.name.toLowerCase().includes(search.toLowerCase()) ||
-          e.tags.some((t) => t.toLowerCase().includes(search.toLowerCase()))
+          e.title.toLowerCase().includes(searchTerm) ||
+          e.org.name.toLowerCase().includes(searchTerm) ||
+          e.tags.some((t) => t.toLowerCase().includes(searchTerm))
       )
     : [];
 
@@ -35,7 +40,16 @@ const Explore = () => {
         </div>
       </header>
 
-      {search && filteredEvents.length > 0 && (
+      {query.isPending && <div className="px-5 py-4"><ListSkeleton rows={3} /></div>}
+      {query.isError && (
+        <div className="px-5 py-4">
+          <ErrorState description="We couldn't load events." onRetry={() => void query.refetch()} />
+        </div>
+      )}
+      {query.isSuccess && searchTerm && filteredEvents.length === 0 && (
+        <p role="status" className="px-5 py-4 text-sm text-muted-foreground">No matching events found.</p>
+      )}
+      {searchTerm && filteredEvents.length > 0 && (
         <div className="px-5 py-4 space-y-2">
           {filteredEvents.map((e) => (
             <button
@@ -53,7 +67,7 @@ const Explore = () => {
         </div>
       )}
 
-      {!search && (
+      {!searchTerm && query.isSuccess && (
         <>
           {/* Trending */}
           <div className="px-5 py-4">
@@ -82,7 +96,7 @@ const Explore = () => {
               <h2 className="text-sm font-bold text-foreground">Suggested for You</h2>
             </div>
             <div className="space-y-2">
-              {mockEvents.slice(0, 3).map((e) => (
+              {events.slice(0, 3).map((e) => (
                 <button
                   key={e.id}
                   onClick={() => navigate(`/event/${e.id}`)}

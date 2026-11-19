@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { Bell, Moon, Plus, Send, Sun } from "lucide-react";
 import CategoryFilter from "@/components/CategoryFilter";
 import EventCard from "@/components/EventCard";
@@ -8,8 +8,9 @@ import { type EventCategory } from "@/data/mockEvents";
 import { useAuth } from "@/contexts/AuthContext";
 import { useFollow } from "@/contexts/FollowContext";
 import { useTheme } from "@/contexts/ThemeContext";
-import { useLocation, useNavigate } from "react-router-dom";
-import { listEventRecords } from "@/data/appDatabase";
+import { useNavigate } from "react-router-dom";
+import { useEvents } from "@/hooks/useEvents";
+import { ErrorState, EventCardSkeleton } from "@/components/states/DataStates";
 
 const Index = () => {
   const [activeCategory, setActiveCategory] = useState<EventCategory | "all" | "following">("all");
@@ -17,12 +18,8 @@ const Index = () => {
   const { followedOrgIds } = useFollow();
   const { theme, toggleTheme } = useTheme();
   const navigate = useNavigate();
-  const location = useLocation();
-  const [events, setEvents] = useState(() => listEventRecords());
-
-  useEffect(() => {
-    setEvents(listEventRecords());
-  }, [location.key]);
+  const query = useEvents();
+  const events = query.data ?? [];
 
   const filtered =
     activeCategory === "following"
@@ -75,13 +72,19 @@ const Index = () => {
 
       <WeeklyDigest />
 
+      {query.isPending && <EventCardSkeleton />}
+      {query.isError && (
+        <div className="mx-auto max-w-3xl px-4 py-4">
+          <ErrorState description="We couldn't load events." onRetry={() => void query.refetch()} />
+        </div>
+      )}
       <div className="mx-auto max-w-3xl snap-y snap-mandatory pt-2 sm:pt-3">
         {filtered.map((event) => (
           <EventCard key={event.id} event={event} />
         ))}
       </div>
 
-      {filtered.length === 0 && (
+      {query.isSuccess && filtered.length === 0 && (
         <div className="flex flex-col items-center justify-center py-20 text-muted-foreground">
           <p className="text-lg font-semibold">No events found</p>
           <p className="text-sm">

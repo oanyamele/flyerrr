@@ -13,15 +13,17 @@ export const STORAGE_KEYS = {
   rsvps: "flyerrr_rsvps_v1",
   reminders: "flyerrr_reminders_v1",
   checkInTokens: "flyerrr_checkin_tokens_v1",
+  bookmarks: "flyerrr_bookmarks_v1",
 } as const;
 
 export type StorageKey = (typeof STORAGE_KEYS)[keyof typeof STORAGE_KEYS];
 
 /**
  * Names used before issue #28 unified them. The stored values have the same shape,
- * so migration copies them unchanged.
+ * so migration copies them unchanged. Keys created after the rename (bookmarks)
+ * have no legacy name.
  */
-export const LEGACY_KEYS: Record<StorageKey, string> = {
+export const LEGACY_KEYS: Partial<Record<StorageKey, string>> = {
   [STORAGE_KEYS.auth]: "flyerrr_auth",
   [STORAGE_KEYS.follows]: "flyerrr_follows",
   [STORAGE_KEYS.theme]: "flyerrr_theme",
@@ -40,6 +42,7 @@ export const LEGACY_KEYS: Record<StorageKey, string> = {
  */
 export const migrateLegacyKeys = (): void => {
   for (const [currentKey, legacyKey] of Object.entries(LEGACY_KEYS)) {
+    if (!legacyKey) continue;
     try {
       const legacyValue = localStorage.getItem(legacyKey);
       if (legacyValue === null) continue;
@@ -52,6 +55,13 @@ export const migrateLegacyKeys = (): void => {
     }
   }
 };
+
+/**
+ * Returns the raw saved value, or null when it is missing. Unlike readString, it
+ * throws when storage is blocked, for callers that must show an error rather than
+ * treat unreadable storage as empty (for example, saved events).
+ */
+export const readStringOrThrow = (key: StorageKey): string | null => localStorage.getItem(key);
 
 /** Returns the raw saved value, or null when it is missing or storage is blocked. */
 export const readString = (key: StorageKey): string | null => {
