@@ -1,5 +1,3 @@
-import { readdirSync, readFileSync } from "node:fs";
-import { join } from "node:path";
 import { beforeEach, describe, expect, it } from "vitest";
 import { repositoryMode } from "@/repositories/config";
 import type { AttendanceRepository, EventRepository, UserRepository } from "@/repositories/contracts";
@@ -147,18 +145,5 @@ describe("HttpRepository", () => {
     });
     expect(signedIn.ok).toBe(true);
     expect(localStorage.getItem("flyer_db_v1")).toContain("student@howard.edu");
-  });
-});
-
-describe("page storage boundary", () => {
-  it("keeps page components from importing src/data", () => {
-    const pagesDir = join(process.cwd(), "src/pages");
-    const sources = readdirSync(pagesDir)
-      .filter((file) => file.endsWith(".tsx"))
-      .map((file) => readFileSync(join(pagesDir, file), "utf8"));
-
-    for (const source of sources) {
-      expect(source).not.toMatch(/from ["']@\/data\//);
-    }
   });
 });

@@ -1,13 +1,19 @@
 import { Calendar, ChevronRight } from "lucide-react";
 import { motion } from "framer-motion";
+import { useNavigate } from "react-router-dom";
+import { Skeleton } from "@/components/ui/skeleton";
+import { useAuth } from "@/contexts/AuthContext";
+import { useAsyncData } from "@/hooks/useAsyncData";
+import { fetchReminderEvents } from "@/data/repository";
 
-const digest = [
-  { day: "Tue", event: "Resume Workshop", time: "2:00 PM", color: "bg-accent" },
-  { day: "Wed", event: "Volleyball Open Gym", time: "7:00 PM", color: "bg-success" },
-  { day: "Fri", event: "Game Night in Blackburn", time: "8:00 PM", color: "bg-primary" },
-];
+const colors = ["bg-accent", "bg-success", "bg-primary"];
 
 const WeeklyDigest = () => {
+  const navigate = useNavigate();
+  const { auth } = useAuth();
+  const userId = auth.userId ?? "guest";
+  const query = useAsyncData(() => fetchReminderEvents(userId), [userId]);
+
   return (
     <motion.div
       initial={{ opacity: 0, y: 20 }}
@@ -19,21 +25,45 @@ const WeeklyDigest = () => {
           <Calendar className="w-4 h-4 text-primary" />
           <h3 className="text-sm font-bold text-foreground">Your Week</h3>
         </div>
-        <button className="text-xs text-muted-foreground flex items-center gap-0.5">
+        <button onClick={() => navigate("/event-reminders")} className="text-xs text-muted-foreground flex items-center gap-0.5">
           See all <ChevronRight className="w-3 h-3" />
         </button>
       </div>
-      <div className="space-y-2">
-        {digest.map((d) => (
-          <div key={d.day} className="flex items-center gap-3">
-            <div className={`w-1 h-8 rounded-full ${d.color}`} />
-            <div className="flex-1">
-              <p className="text-sm font-semibold text-foreground">{d.event}</p>
-              <p className="text-xs text-muted-foreground">{d.day} · {d.time}</p>
+      {query.status === "loading" && (
+        <div className="space-y-2" aria-busy="true">
+          {[0, 1].map((i) => (
+            <div key={i} className="flex items-center gap-3">
+              <Skeleton className="h-8 w-1 rounded-full" />
+              <div className="flex-1 space-y-1.5">
+                <Skeleton className="h-3.5 w-1/2" />
+                <Skeleton className="h-3 w-1/3" />
+              </div>
             </div>
-          </div>
-        ))}
-      </div>
+          ))}
+        </div>
+      )}
+      {query.status === "error" && (
+        <div role="alert" className="flex items-center justify-between text-xs text-muted-foreground">
+          <span>Couldn't load your week.</span>
+          <button onClick={query.retry} className="font-semibold text-primary">Retry</button>
+        </div>
+      )}
+      {query.status === "success" && query.data.length === 0 && (
+        <p className="text-xs text-muted-foreground">Nothing planned yet. RSVP to an event below and it'll show up here.</p>
+      )}
+      {query.status === "success" && query.data.length > 0 && (
+        <div className="space-y-2">
+          {query.data.slice(0, 3).map((e, i) => (
+            <div key={e.id} className="flex items-center gap-3">
+              <div className={`w-1 h-8 rounded-full ${colors[i % colors.length]}`} />
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-semibold text-foreground truncate">{e.title}</p>
+                <p className="text-xs text-muted-foreground">{e.date} · {e.time}</p>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
     </motion.div>
   );
 };

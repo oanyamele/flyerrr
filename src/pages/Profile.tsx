@@ -2,9 +2,10 @@ import { Settings, ChevronRight, Trophy, Calendar, Star, TrendingUp, Moon, Sun, 
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import BottomNav from "@/components/BottomNav";
-import { useAuth } from "@/hooks/useAuth";
+import { useAuth } from "@/contexts/AuthContext";
 import { useTheme } from "@/contexts/ThemeContext";
 import { useNavigate } from "react-router-dom";
+import { useToast } from "@/hooks/use-toast";
 
 const stats = [
   { icon: Calendar, label: "Events Attended", value: "23", color: "text-primary" },
@@ -15,6 +16,7 @@ const stats = [
 
 const Profile = () => {
   const { auth, logout } = useAuth();
+  const { toast } = useToast();
   const { theme, toggleTheme } = useTheme();
   const navigate = useNavigate();
   const menuItems = [
@@ -117,7 +119,9 @@ const Profile = () => {
         <Button
           variant="outline"
           className="w-full rounded-xl text-sm font-semibold text-destructive border-destructive/30"
-          onClick={() => { logout(); navigate("/login"); }}
+          onClick={() => {
+            void logout().then(() => navigate("/login")).catch(() => toast({ title: "Couldn't sign out", description: "Please try again.", variant: "destructive" }));
+          }}
         >
           <LogOut aria-hidden="true" className="w-4 h-4 mr-2" />
           Sign Out

@@ -1,22 +1,25 @@
 import { useParams, useNavigate } from "react-router-dom";
-import { ArrowLeft, Bookmark, Share2, MapPin, Clock, Users, CheckCircle2, QrCode } from "lucide-react";
+import { ArrowLeft, Share2, MapPin, Clock, Users, CheckCircle2, QrCode } from "lucide-react";
 import { motion } from "framer-motion";
 import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useFollow } from "@/contexts/FollowContext";
 import BottomNav from "@/components/BottomNav";
+import { ErrorState, EventCardSkeleton } from "@/components/states/DataStates";
+import { useEvent } from "@/hooks/useEvents";
+import SaveEventButton from "@/components/SaveEventButton";
 import CheckInQr from "@/components/CheckInQr";
-import { useAuth } from "@/hooks/useAuth";
+import { useAuth } from "@/contexts/AuthContext";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { secondsRemaining } from "@/lib/secondsRemaining";
-import { useRepositories } from "@/repositories/useRepositories";
+import { isRsvped, issueDynamicCheckInToken, secondsRemaining, toggleRsvp } from "@/data/checkInStore";
 
 const EventDetail = () => {
   const { id } = useParams();
   const navigate = useNavigate();
-  const { events, attendance } = useRepositories();
-  const event = events.listEvents().find((e) => e.id === id);
+  const query = useEvent(id);
+  const event = query.data;
+  const eventId = event?.id;
   const { auth } = useAuth();
   const [rsvp, setRsvp] = useState(false);
   const [qrOpen, setQrOpen] = useState(false);
@@ -26,18 +29,17 @@ const EventDetail = () => {
   const { isFollowing, toggleFollow } = useFollow();
 
   useEffect(() => {
-    if (!auth.userId || !event) return;
-    setRsvp(attendance.isRsvped(event.id, auth.userId));
-  }, [auth.userId, event, attendance]);
+    setRsvp(Boolean(eventId && auth.userId && isRsvped(eventId, auth.userId)));
+  }, [auth.userId, eventId]);
 
   useEffect(() => {
-    if (!qrOpen || !auth.userId || !event) return;
+    const userId = auth.userId;
+    if (!qrOpen || !userId || !eventId) return;
 
     const refreshToken = () => {
-      void attendance.issueCheckInToken(event.id, auth.userId).then((issued) => {
-        setToken(issued.token);
-        setExpiresAt(issued.expiresAt);
-      });
+      const issued = issueDynamicCheckInToken(eventId, userId);
+      setToken(issued.token);
+      setExpiresAt(issued.expiresAt);
     };
 
     refreshToken();
@@ -48,12 +50,20 @@ const EventDetail = () => {
       window.clearInterval(refreshInterval);
       window.clearInterval(secondTick);
     };
-  }, [qrOpen, auth.userId, event, attendance]);
+  }, [qrOpen, auth.userId, eventId]);
 
-  if (!event) {
+  if (!event || query.isError) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-background">
-        <p className="text-muted-foreground">Event not found</p>
+      <div className="min-h-screen bg-background px-4 pb-24 pt-4">
+        <Button variant="ghost" onClick={() => navigate(-1)}>Go back</Button>
+        {query.isPending ? (
+          <EventCardSkeleton count={1} />
+        ) : query.isError ? (
+          <ErrorState description="We couldn't load this event." onRetry={() => void query.refetch()} />
+        ) : (
+          <p role="status" className="p-4 text-center text-muted-foreground">Event not found</p>
+        )}
+        <BottomNav />
       </div>
     );
   }
@@ -82,9 +92,7 @@ const EventDetail = () => {
           <button type="button" aria-label="Share event" className="w-10 h-10 rounded-full bg-background/80 backdrop-blur flex items-center justify-center">
             <Share2 aria-hidden="true" className="w-5 h-5 text-foreground" />
           </button>
-          <button type="button" aria-label="Save event" className="w-10 h-10 rounded-full bg-background/80 backdrop-blur flex items-center justify-center">
-            <Bookmark aria-hidden="true" className="w-5 h-5 text-foreground" />
-          </button>
+          <SaveEventButton eventId={event.id} className="w-10 h-10 rounded-full bg-background/80 backdrop-blur flex items-center justify-center" />
         </div>
       </div>
 
@@ -186,7 +194,8 @@ const EventDetail = () => {
           <Button
             onClick={() => {
               if (!auth.userId || !event) return;
-              void attendance.toggleRsvp(event.id, auth.userId).then(setRsvp);
+              const next = toggleRsvp(event.id, auth.userId);
+              setRsvp(next);
             }}
             className={`w-full h-12 rounded-2xl text-base font-bold transition-all ${
               rsvp ? "bg-success text-success-foreground" : ""

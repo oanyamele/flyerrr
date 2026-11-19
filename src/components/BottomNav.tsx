@@ -1,6 +1,6 @@
 import { Home, Search, Smartphone, User, Bookmark, Plus } from "lucide-react";
 import { useNavigate, useLocation } from "react-router-dom";
-import { useAuth } from "@/hooks/useAuth";
+import { useAuth } from "@/contexts/AuthContext";
 
 const baseTabs = [
   { icon: Home, label: "Feed", path: "/" },
