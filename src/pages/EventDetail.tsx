@@ -24,18 +24,6 @@ const EventDetail = () => {
   const [tick, setTick] = useState(0);
   const { isFollowing, toggleFollow } = useFollow();
 
-  if (!event) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-background">
-        <p className="text-muted-foreground">Event not found</p>
-      </div>
-    );
-  }
-
-  const attendancePercent = Math.round((event.attendees / event.capacity) * 100);
-  const countdown = secondsRemaining(expiresAt);
-  void tick;
-
   useEffect(() => {
     if (!auth.userId || !event) return;
     setRsvp(isRsvped(event.id, auth.userId));
@@ -59,6 +47,18 @@ const EventDetail = () => {
       window.clearInterval(secondTick);
     };
   }, [qrOpen, auth.userId, event]);
+
+  if (!event) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <p className="text-muted-foreground">Event not found</p>
+      </div>
+    );
+  }
+
+  const attendancePercent = Math.round((event.attendees / event.capacity) * 100);
+  const countdown = secondsRemaining(expiresAt);
+  void tick;
 
   return (
     <div className="min-h-screen bg-background pb-24">
