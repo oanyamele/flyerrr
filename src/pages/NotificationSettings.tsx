@@ -74,7 +74,7 @@ const NotificationSettings = () => {
 
         <Section title="Summary">
           <Row label="Weekly Digest" description="Personalized weekly campus event summary" checked={settings.weeklyDigest} onToggle={() => toggle("weeklyDigest")} />
-          <Row label="Tap-In Confirmation" description="Confirmation when you check in to an event" checked={settings.tapInConfirmation} onToggle={() => toggle("tapInConfirmation")} last />
+          <Row label="Check-In Confirmation" description="Confirmation when you check in to an event" checked={settings.tapInConfirmation} onToggle={() => toggle("tapInConfirmation")} last />
         </Section>
       </div>
     </div>

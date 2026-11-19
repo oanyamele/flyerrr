@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { CheckCircle2, QrCode, ScanLine, Smartphone, Wifi } from "lucide-react";
+import { CheckCircle2, QrCode, ScanLine } from "lucide-react";
 import { motion } from "framer-motion";
 import BottomNav from "@/components/BottomNav";
 import { useAuth } from "@/contexts/AuthContext";
@@ -42,12 +42,16 @@ const TapIn = () => {
     toast({ title: "Check-in confirmed", description: "The student has been marked present." });
   };
 
+  // Depend on the event id (a string), not the event object: the events list is
+  // re-read on every render, so the object is new each time and would restart
+  // this effect, and the token refresh, in an endless loop.
+  const selectedEventKey = selectedEvent?.id;
   useEffect(() => {
     const userId = auth.userId;
-    if (!qrOpen || !userId || !selectedEvent) return;
+    if (!qrOpen || !userId || !selectedEventKey) return;
 
     const refreshToken = () => {
-      const issued = issueDynamicCheckInToken(selectedEvent.id, userId);
+      const issued = issueDynamicCheckInToken(selectedEventKey, userId);
       setToken(issued.token);
       setExpiresAt(issued.expiresAt);
     };
@@ -60,28 +64,18 @@ const TapIn = () => {
       window.clearInterval(refreshInterval);
       window.clearInterval(secondTick);
     };
-  }, [qrOpen, auth.userId, selectedEvent]);
+  }, [qrOpen, auth.userId, selectedEventKey]);
 
   return (
     <div className="min-h-screen bg-background flex flex-col pb-24">
       <header className="px-5 pt-[max(1.5rem,env(safe-area-inset-top))] pb-4">
         <div className="flex items-start justify-between gap-3">
           <div>
-            <h1 className="text-2xl font-extrabold text-foreground">Tap In</h1>
+            <h1 className="text-2xl font-extrabold text-foreground">Check In</h1>
             <p className="text-sm text-muted-foreground">
-              {auth.role === "org_officer" ? "Scan and validate attendance quickly" : "Check in to events instantly"}
+              {auth.role === "org_officer" ? "Validate student check-in codes" : "Check in to events with your QR code"}
             </p>
           </div>
-          {auth.role === "student" && (
-            <button
-              onClick={() => setQrOpen(true)}
-              className="flex h-10 w-10 items-center justify-center rounded-full border border-border bg-card"
-              aria-label="Open backup QR check-in"
-              title="Backup QR check-in"
-            >
-              <QrCode aria-hidden="true" className="h-5 w-5 text-foreground" />
-            </button>
-          )}
         </div>
       </header>
 
@@ -96,13 +90,13 @@ const TapIn = () => {
               <div className="absolute inset-0 rounded-full bg-primary/10 animate-pulse-ring" />
               <div className="absolute inset-4 rounded-full bg-primary/15 animate-pulse-ring" style={{ animationDelay: "0.5s" }} />
               <div className="absolute inset-8 rounded-full bg-primary shadow-2xl shadow-primary/40 flex items-center justify-center">
-                <Smartphone className="w-12 h-12 text-primary-foreground" />
+                <QrCode aria-hidden="true" className="w-12 h-12 text-primary-foreground" />
               </div>
             </motion.div>
 
-            <h2 className="text-xl font-bold text-foreground mb-2 text-center">Hold your iPhone near the reader</h2>
+            <h2 className="text-xl font-bold text-foreground mb-2 text-center">Show your check-in QR code</h2>
             <p className="text-sm text-muted-foreground text-center max-w-xs mb-8">
-              NFC is the fastest option. If NFC fails, use QR backup from the event detail page.
+              Pick the event, then show the code to the organizer. It refreshes every 20 seconds, so a screenshot won't work.
             </p>
 
             <div className="w-full max-w-xs space-y-3">
@@ -118,19 +112,9 @@ const TapIn = () => {
                   </option>
                 ))}
               </select>
-              <div className="flex items-center gap-3 p-4 rounded-2xl bg-card border border-border">
-                <div className="w-10 h-10 rounded-xl bg-success/10 flex items-center justify-center">
-                  <Wifi className="w-5 h-5 text-success" />
-                </div>
-                <div>
-                  <p className="text-sm font-semibold text-foreground">NFC Ready</p>
-                  <p className="text-xs text-muted-foreground">Your device supports Tap In</p>
-                </div>
-              </div>
-
-              <Button className="w-full" onClick={() => showConfirmation("NFC tap successful. Attendance confirmed.")}>
-                <Smartphone className="mr-2 h-4 w-4" />
-                Simulate NFC Tap
+              <Button className="w-full" onClick={() => setQrOpen(true)} disabled={!selectedEvent}>
+                <QrCode aria-hidden="true" className="mr-2 h-4 w-4" />
+                Show My Check-In QR
               </Button>
             </div>
           </>
@@ -191,9 +175,9 @@ const TapIn = () => {
       <Dialog open={qrOpen} onOpenChange={setQrOpen}>
         <DialogContent className="max-w-sm rounded-[12px] border border-border bg-card p-5">
           <DialogHeader>
-            <DialogTitle className="text-[15px] font-medium">Backup QR Check-In</DialogTitle>
+            <DialogTitle className="text-[15px] font-medium">Check-In QR</DialogTitle>
             <DialogDescription className="text-xs">
-              Show this to an organizer scanner. Code refreshes every 20 seconds.
+              Show this to the event organizer. The code refreshes every 20 seconds.
             </DialogDescription>
           </DialogHeader>
           <CheckInQr token={token} eventTitle={selectedEvent?.title} countdown={countdown} />

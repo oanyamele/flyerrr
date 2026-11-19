@@ -215,7 +215,7 @@ const EventDetail = () => {
               onClick={() => setQrOpen(true)}
             >
               <QrCode className="mr-2 h-4 w-4" />
-              Show QR Backup Check-In
+              Show Check-In QR
             </Button>
           )}
         </div>
@@ -224,7 +224,7 @@ const EventDetail = () => {
       <Dialog open={qrOpen} onOpenChange={setQrOpen}>
         <DialogContent className="max-w-sm rounded-[12px] border border-border bg-card p-5">
           <DialogHeader>
-            <DialogTitle className="text-[15px] font-medium">Backup QR Check-In</DialogTitle>
+            <DialogTitle className="text-[15px] font-medium">Check-In QR</DialogTitle>
             <DialogDescription className="text-xs">
               This code refreshes every 20 seconds. Screenshots will not validate.
             </DialogDescription>

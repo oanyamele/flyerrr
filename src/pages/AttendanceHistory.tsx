@@ -32,7 +32,7 @@ const AttendanceHistory = () => {
           <EmptyState
             icon={CalendarX}
             title="You haven't attended any events yet."
-            description="Tap in at an event and it will show up here with the points you earned."
+            description="Check in at an event and it will show up here with the points you earned."
             action={<Button onClick={() => navigate("/")} className="rounded-xl">Browse events</Button>}
           />
         )}
