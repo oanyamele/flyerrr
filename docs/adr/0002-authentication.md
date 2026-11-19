@@ -1,6 +1,6 @@
 # ADR 0002 — Authentication: password hashing, sessions, and role assignment
 
-- **Status:** Proposed — awaiting team agreement
+- **Status:** Accepted — implemented by PR 56 (server, Brian Too) and PR 58 (offline demo mode)
 - **Date:** 2026-09-22
 - **Author:** Nicholas Caesar (`nadcaesar`)
 - **Drives:** [#16](https://github.com/oanyamele/flyerrr/issues/16) — F1.5, Move authentication server-side with hashed passwords
@@ -183,3 +183,13 @@ Each item maps to a test named in `docs/F1.5_SERVER_AUTH_PLAN.md` §Phase 4.
 - **The bypass test:** with `flyerrr_auth` set to
   `{"isLoggedIn":true,"role":"org_officer"}` and no valid cookie, an officer-only endpoint
   returns 401 or 403 and the database is unchanged.
+
+## Implementation (2026-11-19)
+
+- **Decision 1 (Argon2id):** implemented in PR 56 via `@node-rs/argon2` (prebuilt binaries).
+- **Decision 2 (opaque DB sessions):** implemented in PR 56 as an HttpOnly, SameSite=Lax
+  `flyerrr_session` cookie whose SHA-256 digest is stored in `api_sessions`.
+- **Self-assigned roles:** registration always creates a student; officers are provisioned
+  with `api:officer` (PR 56). Offline demo mode follows the same rule (PR 58).
+- **Offline demo mode:** keeps browser-only accounts for demos, now PBKDF2-hashed, with a
+  saved session checked against the stored account (PR 58). It is not a security boundary.
