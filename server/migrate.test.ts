@@ -45,3 +45,52 @@ describe("migration runner", () => {
     assert.deepEqual(await migrate(pool), []);
   });
 });
+
+describe("organizations migration on a database that already has events", () => {
+  const upgradeSchema = `migrate_upgrade_${randomUUID().replaceAll("-", "")}`;
+  const upgrade = new Pool({ connectionString: databaseUrl, options: `-c search_path=${upgradeSchema}` });
+  before(async () => {
+    await admin.query(`CREATE SCHEMA ${upgradeSchema}`);
+  });
+  after(async () => {
+    await upgrade.end();
+    await admin.query(`DROP SCHEMA ${upgradeSchema} CASCADE`);
+  });
+
+  it("gives each existing event creator one organization that they lead", async () => {
+    // Build the database as it was before organizations: migrations 001 and 002 only.
+    const all = await listMigrations();
+    const before003 = all.filter((migration) => migration.name < "003");
+    await upgrade.query("CREATE TABLE schema_migrations (name text PRIMARY KEY, checksum text NOT NULL, applied_at timestamptz NOT NULL DEFAULT now())");
+    for (const migration of before003) {
+      await upgrade.query(migration.sql);
+      await upgrade.query("INSERT INTO schema_migrations (name, checksum) VALUES ($1, $2)", [migration.name, migration.checksum]);
+    }
+    const [first, second] = [randomUUID(), randomUUID()];
+    for (const [id, email, name] of [[first, "one@howard.edu", "Ada Lovelace"], [second, "two@howard.edu", "!!"]]) {
+      await upgrade.query("INSERT INTO api_users(id,email,password_hash,name,role) VALUES ($1,$2,'x',$3,'org_officer')", [id, email, name]);
+    }
+    for (const [creator, title] of [[first, "A"], [first, "B"], [second, "C"]]) {
+      await upgrade.query("INSERT INTO api_events(id,created_by,starts_at,payload) VALUES ($1,$2,now() + interval '1 day',$3)", [randomUUID(), creator, JSON.stringify({ title })]);
+    }
+
+    assert.deepEqual(await migrate(upgrade), ["003_organizations.sql"]);
+
+    const orgs = await upgrade.query<{ created_by: string; handle: string; name: string; events: string; role: string }>(
+      `SELECT o.created_by, o.handle, o.name, m.role,
+              (SELECT count(*) FROM api_events e WHERE e.organization_id = o.id) AS events
+       FROM api_organizations o JOIN api_organization_members m ON m.organization_id = o.id AND m.user_id = o.created_by
+       ORDER BY o.name`,
+    );
+    assert.equal(orgs.rowCount, 2);
+    const byCreator = new Map(orgs.rows.map((row) => [row.created_by, row]));
+    assert.equal(byCreator.get(first)?.events, "2");
+    assert.equal(byCreator.get(first)?.name, "Ada Lovelace Org");
+    assert.match(byCreator.get(first)!.handle, /^adalovelace_[0-9a-f]{6}$/);
+    assert.equal(byCreator.get(second)?.events, "1");
+    assert.match(byCreator.get(second)!.handle, /^org_[0-9a-f]{6}$/);
+    assert.ok(orgs.rows.every((row) => row.role === "leader"));
+    const orphans = await upgrade.query("SELECT count(*) FROM api_events WHERE organization_id IS NULL");
+    assert.equal(orphans.rows[0].count, "0");
+  });
+});
