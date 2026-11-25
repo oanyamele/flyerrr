@@ -29,7 +29,7 @@ const CheckInQr = ({ token, eventTitle, countdown }: CheckInQrProps) => {
         Refreshes in <span className="font-semibold text-foreground">{countdown}s</span>
       </p>
       <p className="sr-only">{label}</p>
-      <p className="break-all rounded-[8px] bg-secondary/20 px-2 py-1 text-[10px] text-foreground">
+      <p data-testid="check-in-code" className="break-all rounded-[8px] bg-secondary/20 px-2 py-1 text-[10px] text-foreground">
         {token || "Generating code…"}
       </p>
     </div>
