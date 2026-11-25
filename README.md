@@ -1,5 +1,7 @@
 # flyer
 
+[![CI](https://github.com/oanyamele/flyerrr/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/oanyamele/flyerrr/actions/workflows/ci.yml)
+
 Campus event discovery and attendance prototype built with React and TypeScript.
 
 ## Shared saved events
