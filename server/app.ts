@@ -4,6 +4,7 @@ import { hash, verify } from "@node-rs/argon2";
 import type { Pool, PoolClient } from "pg";
 import { z } from "zod";
 import { authFormSchema, eventFormSchema } from "../shared/forms";
+import { CHECK_IN_TTL_SECONDS, MIN_SECRET_LENGTH, readCheckInToken, signCheckInToken } from "./checkIn";
 
 const COOKIE = "flyerrr_session";
 const SESSION_SECONDS = 7 * 24 * 60 * 60;
@@ -36,7 +37,24 @@ const eventFields = (input: EventInput, image: string) => ({
   tags: input.tags.split(",").map(t => t.trim()).filter(Boolean), image,
 });
 
-export const createApi = async (pool: Pool, options: { origin: string; secureCookies: boolean }) => {
+// Thrown inside a transaction to roll it back and answer with a specific status.
+class Rejected extends Error {
+  status: number;
+  body: Record<string, unknown>;
+  constructor(status: number, body: Record<string, unknown>) {
+    super(String(body.error));
+    this.status = status;
+    this.body = body;
+  }
+}
+
+export const createApi = async (pool: Pool, options: { origin: string; secureCookies: boolean; checkInSecret?: string }) => {
+  // Signs check-in codes. A deployment must set one shared secret; without it each process
+  // makes its own, so codes only work on the instance that issued them.
+  if (options.checkInSecret !== undefined && options.checkInSecret.length < MIN_SECRET_LENGTH) {
+    throw new Error(`The check-in secret must be at least ${MIN_SECRET_LENGTH} characters.`);
+  }
+  const checkInSecret = options.checkInSecret ?? randomBytes(32).toString("hex");
   const app = express();
   const dummyHash = await hash(randomBytes(32).toString("hex"));
   app.disable("x-powered-by");
@@ -407,6 +425,80 @@ export const createApi = async (pool: Pool, options: { origin: string; secureCoo
     }
     await pool.query("DELETE FROM api_organization_members WHERE organization_id=$1 AND user_id=$2", [id, memberId]);
     res.sendStatus(204);
+  });
+
+  // Check-in. A signed-in person asks for a short-lived code for an event, and shows it as a
+  // QR code. An officer who manages the event submits it from their own device. The code is
+  // signed with a secret only the server holds, expires 2 minutes after the server issues it,
+  // and works once. Expiry and single use are decided by the database, not by any device clock.
+  app.post("/api/events/:id/check-in-tokens", async (req, res) => {
+    const user: User = res.locals.user;
+    const id = idSchema.parse(req.params.id);
+    if (!(await pool.query("SELECT 1 FROM api_events WHERE id = $1", [id])).rowCount) return void res.status(404).json({ error: "Event not found." });
+    const nonce = randomUUID();
+    const expiresAt = Number((await pool.query<{ expires: string }>("SELECT floor(extract(epoch FROM now()))::bigint + $1 AS expires", [CHECK_IN_TTL_SECONDS])).rows[0].expires);
+    const token = signCheckInToken(checkInSecret, { nonce, eventId: id, userId: user.id, expiresAt });
+    // One live code per person and event: asking again replaces the previous one. Old unused codes are cleaned up here.
+    await pool.query("DELETE FROM api_check_in_nonces WHERE consumed_at IS NULL AND ((event_id = $1 AND user_id = $2) OR expires_at < now() - interval '1 day')", [id, user.id]);
+    await pool.query("INSERT INTO api_check_in_nonces(id,event_id,user_id,token_digest,expires_at) VALUES ($1,$2,$3,$4,to_timestamp($5))", [nonce, id, user.id, digest(token), expiresAt]);
+    res.status(201).json({ token, expiresAt: new Date(expiresAt * 1000).toISOString() });
+  });
+  app.post("/api/events/:id/check-ins", async (req, res) => {
+    const user: User = res.locals.user;
+    const id = idSchema.parse(req.params.id);
+    const access = await eventAccess(id, user.id);
+    if (!access) return void res.status(404).json({ error: "Event not found." });
+    if (!access.canEdit) return void res.status(403).json({ error: "Only the event's owner, an invited editor or a leader of its organization can check people in." });
+    const { token } = z.object({ token: z.string().min(1).max(600) }).parse(req.body ?? {});
+    const read = readCheckInToken(checkInSecret, token);
+    if (!read.ok) return void res.status(400).json({ error: "This is not a valid check-in code.", code: "invalid" });
+    const { claims } = read;
+    if (claims.eventId !== id) return void res.status(400).json({ error: "This code is for a different event.", code: "wrong_event" });
+    if (claims.expiresAt * 1000 <= Date.now()) return void res.status(410).json({ error: "This code has expired. Ask the student to refresh it.", code: "expired" });
+    try {
+      const checkedInAt = await transaction(async db => {
+        const consumed = await db.query<{ user_id: string }>(
+          `UPDATE api_check_in_nonces SET consumed_at = now(), consumed_by = $3
+           WHERE id = $1 AND token_digest = $2 AND event_id = $4 AND consumed_at IS NULL AND expires_at > now() RETURNING user_id`,
+          [claims.nonce, digest(token), user.id, id],
+        );
+        if (!consumed.rowCount || consumed.rows[0].user_id !== claims.userId) {
+          const known = (await db.query<{ consumed_at: Date | null }>("SELECT consumed_at FROM api_check_in_nonces WHERE id = $1 AND token_digest = $2", [claims.nonce, digest(token)])).rows[0];
+          if (known?.consumed_at) {
+            const earlier = (await db.query<{ checked_in_at: Date }>("SELECT checked_in_at FROM api_attendance WHERE nonce_id = $1", [claims.nonce])).rows[0];
+            throw new Rejected(409, { error: "This code was already used.", code: "already_used", checkedInAt: earlier?.checked_in_at });
+          }
+          throw new Rejected(410, { error: "This code is no longer valid. Ask the student to refresh it.", code: "expired" });
+        }
+        const inserted = await db.query<{ checked_in_at: Date }>(
+          `INSERT INTO api_attendance(id,event_id,user_id,nonce_id,checked_in_by) VALUES ($1,$2,$3,$4,$5)
+           ON CONFLICT (event_id, user_id) DO NOTHING RETURNING checked_in_at`,
+          [randomUUID(), id, claims.userId, claims.nonce, user.id],
+        );
+        if (!inserted.rowCount) {
+          const earlier = (await db.query<{ checked_in_at: Date }>("SELECT checked_in_at FROM api_attendance WHERE event_id = $1 AND user_id = $2", [id, claims.userId])).rows[0];
+          throw new Rejected(409, { error: "This person is already checked in.", code: "already_checked_in", checkedInAt: earlier?.checked_in_at });
+        }
+        return inserted.rows[0].checked_in_at;
+      });
+      const attendee = (await pool.query<{ userId: string; name: string; email: string }>(`SELECT id AS "userId", name, email FROM api_users WHERE id = $1`, [claims.userId])).rows[0];
+      res.status(201).json({ attendee, checkedInAt });
+    } catch (error) {
+      if (error instanceof Rejected) return void res.status(error.status).json(error.body);
+      throw error;
+    }
+  });
+  app.get("/api/events/:id/attendance", async (req, res) => {
+    const user: User = res.locals.user;
+    const id = idSchema.parse(req.params.id);
+    const access = await eventAccess(id, user.id);
+    if (!access) return void res.status(404).json({ error: "Event not found." });
+    if (!access.canEdit) return void res.status(403).json({ error: "Only the event's owner, an invited editor or a leader of its organization can see who checked in." });
+    const result = await pool.query(
+      `SELECT a.user_id AS "userId", u.name, u.email, a.checked_in_at AS "checkedInAt", a.checked_in_by AS "checkedInBy"
+       FROM api_attendance a JOIN api_users u ON u.id = a.user_id WHERE a.event_id = $1 ORDER BY a.checked_in_at, a.user_id`, [id],
+    );
+    res.json(result.rows);
   });
 
   app.get("/api/bookmarks", async (_req, res) => {

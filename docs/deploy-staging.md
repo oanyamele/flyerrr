@@ -41,6 +41,9 @@ Supabase's built-in data API cannot read them with the public key. Do not add po
 3. When it asks for values, enter:
    - `DATABASE_URL`: the session pooler string from step 1.
    - `DATABASE_SSL_CA`: the whole certificate, including the BEGIN and END lines.
+   - `CHECK_IN_SECRET`: a random secret of at least 32 characters. Create one in a terminal with
+     `openssl rand -hex 32` and paste the output. Keep it private, like the database password.
+     Without it the server refuses to start in staging.
    - `APP_ORIGIN`: the service's public address, such as `https://flyerrr-staging.onrender.com`.
      The service name decides the address. If Render shows a different one after creation,
      change `APP_ORIGIN` to match and redeploy. A mismatch makes every sign-in return 403.
@@ -49,6 +52,13 @@ Supabase's built-in data API cannot read them with the public key. Do not add po
 
 The free plan sleeps after a period without traffic, and the first request afterwards is slow.
 That is fine for staging.
+
+### Adding the secret to a service that already exists
+
+If the service was created before check-in codes were added, add `CHECK_IN_SECRET` before you
+deploy the version that needs it: open the service in Render, choose **Environment**, add the
+variable and save. Deploying first fails the health check, and Render keeps the previous
+version running.
 
 ## 3. Create the first officer
 

@@ -51,7 +51,7 @@ environment variable it adds, for databases that use their own certificate autho
 ## Database migrations
 
 Schema changes live in `server/migrations/` as numbered SQL files
-(`001_bookmarks.sql`, `002_event_editors.sql`, `003_organizations.sql`, `004_lock_down_tables.sql`, and so on). The runner in `server/database.ts`
+(`001_bookmarks.sql`, `002_event_editors.sql`, `003_organizations.sql`, `004_lock_down_tables.sql`, `005_check_in.sql`, and so on). The runner in `server/database.ts`
 applies them in name order and records each one in a `schema_migrations` table with
 a SHA-256 checksum. Running it again does nothing.
 
@@ -139,6 +139,9 @@ environment variables through the host. `PORT` defaults to 3001.
 | GET | `/api/organizations/:id/members` | Lists members; members only |
 | POST | `/api/organizations/:id/members` | Adds a registered account by email as `member` or `leader`, or changes an existing member's role; leader only |
 | DELETE | `/api/organizations/:id/members/:userId` | Removes a member; a leader, or the member removing themself |
+| POST | `/api/events/:id/check-in-tokens` | Any signed-in account gets a signed, single-use check-in code for themself; it expires after 2 minutes |
+| POST | `/api/events/:id/check-ins` | Redeems a code and records attendance; event owner, invited editor or organization leader only |
+| GET | `/api/events/:id/attendance` | Lists who checked in; same people as above |
 | GET | `/api/bookmarks` | Lists only the caller's saved events |
 | PUT | `/api/bookmarks/:id` | Idempotently saves an existing event |
 | DELETE | `/api/bookmarks/:id` | Idempotently removes the caller's save |
@@ -158,6 +161,21 @@ their first event. An officer who leads several must send `organizationId` (othe
 The web forms do not have an organization picker yet, so until they do, they publish to the
 default organization. Verification and follower counts are not stored yet and are always
 `false` and `0`.
+
+**Check-in codes.** A signed-in student asks the server for a code and shows it as a QR code.
+An officer scans it on a different device and sends it to the server, which marks the code used
+and records the attendance in one database transaction. The code is the payload plus an
+HMAC-SHA256 signature made with `CHECK_IN_SECRET`, a secret that only the server holds, so
+changing the event, the person or the expiry makes it invalid. The database stores only a
+digest of each code. A code expires 2 minutes after the server issues it and works once, and
+both rules use the database clock, never a device clock. A student can ask again at any time,
+which replaces their unused code for that event. A person can be checked in to an event only once.
+Only the event's owner, invited editors and leaders of its organization can redeem codes or see
+attendance. Failures return a `code`: `invalid`, `wrong_event`, `expired` (410), `already_used`
+or `already_checked_in` (both 409). `CHECK_IN_SECRET` is at least 32 characters (generate one with
+`openssl rand -hex 32`) and is required when `NODE_ENV=production`. Every instance must share it.
+Without it outside production, each process makes its own, so codes only work on the instance that
+issued them. Changing it invalidates codes that are in flight, which expire within 2 minutes anyway.
 
 **Event permissions.** The officer who publishes an event owns it, and so does every
 leader of the event's organization. The owner can
