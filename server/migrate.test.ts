@@ -18,7 +18,6 @@ describe("migration runner", () => {
   after(async () => {
     await pool.end();
     await admin.query(`DROP SCHEMA ${schema} CASCADE`);
-    await admin.end();
   });
 
   it("applies every migration once and records its checksum", async () => {
@@ -93,4 +92,9 @@ describe("organizations migration on a database that already has events", () => 
     const orphans = await upgrade.query("SELECT count(*) FROM api_events WHERE organization_id IS NULL");
     assert.equal(orphans.rows[0].count, "0");
   });
+});
+
+// Both suites above share the admin connection, so it is closed only after the last one.
+after(async () => {
+  await admin.end();
 });
