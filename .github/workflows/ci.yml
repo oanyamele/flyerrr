@@ -58,6 +58,14 @@ jobs:
         # Fails when line coverage of src/data drops below 60%.
         run: npm test
 
+      - name: Apply database migrations
+        # Run twice: the second run must be a no-op, proving migrations are repeatable.
+        run: |
+          bun run api:migrate
+          bun run api:migrate
+        env:
+          DATABASE_URL: postgres://flyerrr:flyerrr_test@127.0.0.1:5432/flyerrr_test
+
       - name: API integration tests
         run: bun run test:api
         env:

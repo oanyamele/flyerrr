@@ -13,7 +13,8 @@
     "test:watch": "vitest",
     "api:dev": "tsx watch --env-file=.env.local server/index.ts",
     "api:start": "tsx server/index.ts",
-    "test:api": "tsx --test server/api.test.ts",
+    "api:migrate": "tsx server/migrate.ts",
+    "test:api": "tsx --test server/api.test.ts server/migrate.test.ts",
     "typecheck": "tsc --noEmit -p tsconfig.app.json && tsc --noEmit -p tsconfig.node.json && tsc --noEmit -p tsconfig.server.json",
     "api:officer": "tsx --env-file=.env.local server/createOfficer.ts",
     "test:bookmarks:browser": "playwright test --config playwright.bookmarks.config.ts"
