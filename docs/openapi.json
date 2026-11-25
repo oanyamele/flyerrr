@@ -26,6 +26,9 @@
     },
     {
       "name": "Bookmarks"
+    },
+    {
+      "name": "Check-in"
     }
   ],
   "security": [
@@ -1816,6 +1819,291 @@
           }
         }
       }
+    },
+    "/api/events/{id}/check-in-tokens": {
+      "post": {
+        "summary": "Get a check-in code for an event",
+        "operationId": "issueCheckInToken",
+        "tags": [
+          "Check-in"
+        ],
+        "description": "Any signed-in account can ask for a code for themself. The server signs it with a secret only it holds and stores only a digest. It expires 2 minutes after issue and works once. Asking again replaces the previous unused code for the same event. Show the code as a QR code.",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "description": "Event id.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "The code.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CheckInToken"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Malformed event id.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "No valid session cookie.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "The `Origin` is not allowed.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such event.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unexpected server error. Nothing about the failure is exposed.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/events/{id}/check-ins": {
+      "post": {
+        "summary": "Check a person in with their code",
+        "operationId": "redeemCheckIn",
+        "tags": [
+          "Check-in"
+        ],
+        "description": "For the event's owner, invited editors and leaders of its organization, on their own device. Marks the code used and records the person's attendance in one transaction. Expiry and single use are decided by the database clock. A rejected attempt never uses the code up.",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "description": "Event id.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CheckInRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "The person was checked in.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CheckInResult"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "The code is malformed, has a bad signature (`code: invalid`), or is for another event (`code: wrong_event`).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "No valid session cookie.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "The caller does not manage this event, or the `Origin` is not allowed.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such event.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "The code was already used (`code: already_used`), or the person is already checked in with another code (`code: already_checked_in`). `checkedInAt` says when.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "410": {
+            "description": "The code expired, or was replaced by a newer one (`code: expired`).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unexpected server error. Nothing about the failure is exposed.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/events/{id}/attendance": {
+      "get": {
+        "summary": "List who checked in",
+        "operationId": "listAttendance",
+        "tags": [
+          "Check-in"
+        ],
+        "description": "For the event's owner, invited editors and leaders of its organization.",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "description": "Event id.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Everyone checked in, earliest first.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/AttendanceRecord"
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Malformed event id.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "No valid session cookie.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "The caller does not manage this event.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such event.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unexpected server error. Nothing about the failure is exposed.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
@@ -1846,6 +2134,15 @@
                 "type": "string"
               }
             }
+          },
+          "code": {
+            "type": "string",
+            "description": "A stable machine-readable reason, present on check-in failures."
+          },
+          "checkedInAt": {
+            "type": "string",
+            "format": "date-time",
+            "description": "When the person was already checked in (check-in conflicts only)."
           }
         }
       },
@@ -2311,6 +2608,104 @@
           }
         },
         "description": "Send a name, a handle, or both."
+      },
+      "CheckInToken": {
+        "type": "object",
+        "required": [
+          "token",
+          "expiresAt"
+        ],
+        "properties": {
+          "token": {
+            "type": "string",
+            "description": "Opaque. Put it in the QR code exactly as received."
+          },
+          "expiresAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "CheckInRequest": {
+        "type": "object",
+        "required": [
+          "token"
+        ],
+        "properties": {
+          "token": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 600
+          }
+        }
+      },
+      "CheckInResult": {
+        "type": "object",
+        "required": [
+          "attendee",
+          "checkedInAt"
+        ],
+        "properties": {
+          "attendee": {
+            "type": "object",
+            "required": [
+              "userId",
+              "name",
+              "email"
+            ],
+            "properties": {
+              "userId": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "name": {
+                "type": "string"
+              },
+              "email": {
+                "type": "string",
+                "format": "email"
+              }
+            }
+          },
+          "checkedInAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "AttendanceRecord": {
+        "type": "object",
+        "required": [
+          "userId",
+          "name",
+          "email",
+          "checkedInAt"
+        ],
+        "properties": {
+          "userId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "name": {
+            "type": "string"
+          },
+          "email": {
+            "type": "string",
+            "format": "email"
+          },
+          "checkedInAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "checkedInBy": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid",
+            "description": "The account that scanned the code."
+          }
+        }
       }
     }
   }

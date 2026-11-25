@@ -37,7 +37,7 @@ describe("migration runner", () => {
       `SELECT relname, relrowsecurity FROM pg_class
        WHERE relkind = 'r' AND relnamespace = (SELECT oid FROM pg_namespace WHERE nspname = current_schema()) ORDER BY relname`,
     );
-    assert.ok(rows.length >= 8, "expected the application tables and schema_migrations");
+    assert.ok(rows.length >= 10, "expected the application tables and schema_migrations");
     assert.deepEqual(rows.filter((row) => !row.relrowsecurity).map((row) => row.relname), []);
   });
 
@@ -82,7 +82,7 @@ describe("organizations migration on a database that already has events", () => 
       await upgrade.query("INSERT INTO api_events(id,created_by,starts_at,payload) VALUES ($1,$2,now() + interval '1 day',$3)", [randomUUID(), creator, JSON.stringify({ title })]);
     }
 
-    assert.deepEqual(await migrate(upgrade), ["003_organizations.sql", "004_lock_down_tables.sql"]);
+    assert.deepEqual(await migrate(upgrade), ["003_organizations.sql", "004_lock_down_tables.sql", "005_check_in.sql"]);
 
     const orgs = await upgrade.query<{ created_by: string; handle: string; name: string; events: string; role: string }>(
       `SELECT o.created_by, o.handle, o.name, m.role,

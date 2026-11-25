@@ -17,6 +17,9 @@ services:
         sync: false
       - key: DATABASE_SSL_CA
         sync: false
+      # Signs check-in codes. At least 32 random characters, such as the output of: openssl rand -hex 32
+      - key: CHECK_IN_SECRET
+        sync: false
       # The public https address of this service, for example https://flyerrr-staging.onrender.com
       - key: APP_ORIGIN
         sync: false
