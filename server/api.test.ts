@@ -276,4 +276,41 @@ describe("PostgreSQL bookmark API", () => {
     assert.equal((await request(`${members}/${lead.user.userId}`, lead.cookie, "DELETE")).status, 204);
     assert.equal((await request(members, lead.cookie)).status, 403);
   });
+
+  it("lets a leader rename and delete an organization", async () => {
+    const lead = await register("crud-lead@howard.edu");
+    const member = await register("crud-member@howard.edu");
+    const stranger = await register("crud-stranger@howard.edu");
+    await pool.query("UPDATE api_users SET role='org_officer' WHERE id=$1", [lead.user.userId]);
+    const created = orgSchema.parse(await (await request("/organizations", lead.cookie, "POST", { name: "Chess Club", handle: "chess_club" })).json());
+    const other = orgSchema.parse(await (await request("/organizations", lead.cookie, "POST", { name: "Go Club", handle: "go_club" })).json());
+    const path = `/organizations/${created.id}`;
+    assert.equal((await request(`/organizations/${created.id}/members`, lead.cookie, "POST", { email: "crud-member@howard.edu" })).status, 201);
+
+    // Only a leader can edit; a non-member cannot even tell that it exists.
+    assert.equal((await request(path, member.cookie, "PUT", { name: "Hijacked" })).status, 403);
+    assert.equal((await request(path, stranger.cookie, "PUT", { name: "Hijacked" })).status, 404);
+    assert.equal((await request(path, lead.cookie, "PUT", {})).status, 400);
+    assert.equal((await request(path, lead.cookie, "PUT", { name: "x" })).status, 400);
+    assert.equal((await request(path, lead.cookie, "PUT", { handle: "bad handle" })).status, 400);
+
+    const renamed = orgSchema.parse(await (await request(path, lead.cookie, "PUT", { name: "Chess and Strategy Club" })).json());
+    assert.deepEqual([renamed.id, renamed.name, renamed.handle, renamed.myRole], [created.id, "Chess and Strategy Club", "@chess_club", "leader"]);
+    const rehandled = orgSchema.parse(await (await request(path, lead.cookie, "PUT", { handle: "@Chess_HQ" })).json());
+    assert.deepEqual([rehandled.name, rehandled.handle], ["Chess and Strategy Club", "@Chess_HQ"]);
+    assert.equal((await request(path, lead.cookie, "PUT", { handle: "GO_CLUB" })).status, 409);
+    assert.equal(orgSchema.parse(await (await request(path, member.cookie)).json()).name, "Chess and Strategy Club");
+
+    // An organization with events cannot be deleted; once they are gone, only a leader can delete it.
+    const event = orgEventSchema.parse(await (await request("/events", lead.cookie, "POST", { ...eventBody(), organizationId: created.id })).json());
+    assert.equal((await request(path, lead.cookie, "DELETE")).status, 409);
+    assert.equal((await request(`/events/${event.id}`, lead.cookie, "DELETE")).status, 204);
+    assert.equal((await request(path, member.cookie, "DELETE")).status, 403);
+    assert.equal((await request(path, stranger.cookie, "DELETE")).status, 404);
+    assert.equal((await request(path, lead.cookie, "DELETE")).status, 204);
+    assert.equal((await request(path, lead.cookie)).status, 404);
+    assert.equal((await request(path, lead.cookie, "DELETE")).status, 404);
+    assert.equal((await pool.query("SELECT count(*) FROM api_organization_members WHERE organization_id=$1", [created.id])).rows[0].count, "0");
+    assert.equal((await request(`/organizations/${other.id}`, lead.cookie)).status, 200);
+  });
 });
