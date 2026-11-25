@@ -42,10 +42,16 @@ adapter. Offline bookmarks use `flyerrr_bookmarks_v1`, keyed by user ID, and are
 never presented as shared server data. Legacy component-only saves have no
 durable state to migrate. Demo accounts and passwords are not copied to the API.
 
+## Deploying
+
+Staging runs the API and the built web app as one container, with a Supabase project as the
+database. See [deploy-staging.md](./deploy-staging.md). `DATABASE_SSL_CA` is the one extra
+environment variable it adds, for databases that use their own certificate authority.
+
 ## Database migrations
 
 Schema changes live in `server/migrations/` as numbered SQL files
-(`001_bookmarks.sql`, `002_event_editors.sql`, `003_organizations.sql`, and so on). The runner in `server/database.ts`
+(`001_bookmarks.sql`, `002_event_editors.sql`, `003_organizations.sql`, `004_lock_down_tables.sql`, and so on). The runner in `server/database.ts`
 applies them in name order and records each one in a `schema_migrations` table with
 a SHA-256 checksum. Running it again does nothing.
 

@@ -1,8 +1,9 @@
 import { createHash } from "node:crypto";
 import { readdir, readFile } from "node:fs/promises";
 import { Pool } from "pg";
+import { poolConfig } from "./poolConfig";
 
-export const createPool = (connectionString: string) => new Pool({ connectionString });
+export const createPool = (connectionString: string) => new Pool(poolConfig(connectionString));
 
 const MIGRATIONS_DIR = new URL("./migrations/", import.meta.url);
 // Arbitrary constant. A session-level advisory lock serializes migrators that start
