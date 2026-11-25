@@ -1,21 +1,26 @@
 import { useNavigate } from "react-router-dom";
 import { ArrowLeft, CalendarDays, Database, Download, Users } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { useRepositories } from "@/repositories/useRepositories";
 import { useAsyncData } from "@/hooks/useAsyncData";
-import { fetchAttendanceReport } from "@/data/repository";
-import { buildAttendanceCsv } from "@/data/attendanceStore";
 import { EmptyState, ErrorState, ListSkeleton } from "@/components/states/DataStates";
 
 const AttendanceReports = () => {
   const navigate = useNavigate();
-  const query = useAsyncData(fetchAttendanceReport);
+  const { attendance } = useRepositories();
+  // The repository reads synchronously; running it through useAsyncData gives this
+  // page the same loading, error and retry states as the other attendance screens.
+  const query = useAsyncData(
+    async () => ({ records: attendance.listAttendance(), summary: attendance.summarizeAttendance() }),
+    [attendance],
+  );
   const records = query.status === "success" ? query.data.records : [];
   const summary = query.status === "success" ? query.data.summary : [];
   const totalCheckIns = records.length;
   const totalEvents = summary.length;
 
   const downloadCsv = () => {
-    const csv = buildAttendanceCsv(records);
+    const csv = attendance.exportAttendanceCsv();
     const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
     const url = URL.createObjectURL(blob);
     const link = document.createElement("a");

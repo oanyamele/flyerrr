@@ -17,6 +17,8 @@ import Index from "@/pages/Index";
 import OrganizationVerificationQueue from "@/pages/OrganizationVerificationQueue";
 import Profile from "@/pages/Profile";
 import TapIn from "@/pages/TapIn";
+import { RepositoryProvider } from "@/repositories/RepositoryProvider";
+import { LocalStorageRepository } from "@/repositories/localStorageRepository";
 
 const DB_KEY = "flyer_db_v1";
 
@@ -29,7 +31,9 @@ const renderPage = (Page: ComponentType) =>
         <ThemeProvider>
           <AuthProvider>
             <FollowProvider>
-              <Page />
+              <RepositoryProvider>
+                <Page />
+              </RepositoryProvider>
             </FollowProvider>
           </AuthProvider>
         </ThemeProvider>
@@ -164,8 +168,12 @@ describe("Attendance Reporting", () => {
     expect(screen.getByRole("button", { name: /Export Attendance Report/ })).toBeInTheDocument();
   });
 
+  // The repository layer reseeds a corrupt database instead of failing, so the error
+  // state is reached when reading storage itself throws (for example, when it is blocked).
   it("shows a retryable error when records can't be read", async () => {
-    localStorage.setItem(DB_KEY, "{not json");
+    vi.spyOn(LocalStorageRepository.prototype, "listAttendance").mockImplementation(() => {
+      throw new DOMException("Storage is blocked", "SecurityError");
+    });
     renderPage(AttendanceReports);
     expect(await screen.findByText("We couldn't load attendance records.")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Retry" })).toBeInTheDocument();

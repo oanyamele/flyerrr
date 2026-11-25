@@ -21,6 +21,7 @@ export interface AppUser {
 export interface EventRecord extends CampusEvent {
   createdAt: string;
   createdByUserId?: string;
+  checkInPoints?: number;
 }
 
 export interface VerificationRecord {
@@ -250,6 +251,7 @@ export const createEventRecord = (input: {
     tags: input.tags,
     createdAt: nowIso(),
     createdByUserId: input.creatorUserId,
+    checkInPoints: 10,
   };
 
   writeDb({ ...db, events: [event, ...db.events] });
@@ -257,3 +259,47 @@ export const createEventRecord = (input: {
 };
 
 export const listEventRecords = () => getDatabase().events;
+
+const CHECK_IN_POINTS_BY_EVENT: Record<string, number> = {
+  "1": 10,
+  "2": 15,
+  "3": 10,
+  "4": 5,
+  "5": 8,
+};
+
+/** Points configured for an event. New events default to 10. */
+export const pointsForEvent = (event: { id: string; checkInPoints?: number }) =>
+  event.checkInPoints ?? CHECK_IN_POINTS_BY_EVENT[event.id] ?? 10;
+
+export const recordCheckIn = (input: { eventId: string; userId: string }) => {
+  const db = getDatabase();
+  const event = db.events.find((item) => item.id === input.eventId);
+  if (!event) return { ok: false as const, reason: "Event not found." };
+
+  const attendee = db.users.find((user) => user.id === input.userId);
+  if (!attendee) return { ok: false as const, reason: "Student account not found." };
+
+  const alreadyCheckedIn = db.attendance.some(
+    (row) => row.eventId === event.id && row.attendeeId === attendee.id,
+  );
+  if (alreadyCheckedIn) {
+    return { ok: false as const, reason: "This student is already checked in for this event." };
+  }
+
+  const record: AttendanceRecord = {
+    id: `attendance-${Date.now()}`,
+    eventId: event.id,
+    eventTitle: event.title,
+    orgId: event.org.id,
+    orgName: event.org.name,
+    attendeeId: attendee.id,
+    attendeeName: attendee.name,
+    attendeeEmail: attendee.email,
+    checkedInAt: nowIso(),
+    pointsAwarded: pointsForEvent(event),
+  };
+
+  writeDb({ ...db, attendance: [record, ...db.attendance] });
+  return { ok: true as const, record };
+};
