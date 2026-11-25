@@ -3,7 +3,7 @@ import { CheckCircle2, QrCode, ScanLine } from "lucide-react";
 import { motion } from "framer-motion";
 import BottomNav from "@/components/BottomNav";
 import { useAuth } from "@/contexts/AuthContext";
-import { listEventRecords } from "@/data/appDatabase";
+import { listEventRecords, recordCheckIn } from "@/data/appDatabase";
 import { issueDynamicCheckInToken, secondsRemaining, validateCheckInToken } from "@/data/checkInStore";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
@@ -16,7 +16,7 @@ const TapIn = () => {
   const events = listEventRecords();
   const [selectedEventId, setSelectedEventId] = useState(events[0]?.id ?? "");
   const [scannedToken, setScannedToken] = useState("");
-  const [confirmationText, setConfirmationText] = useState("");
+  const [confirmation, setConfirmation] = useState<{ ok: boolean; message: string } | null>(null);
   const [qrOpen, setQrOpen] = useState(false);
   const [token, setToken] = useState("");
   const [expiresAt, setExpiresAt] = useState(0);
@@ -29,7 +29,18 @@ const TapIn = () => {
   const countdown = secondsRemaining(expiresAt);
   void tick;
 
-  const showConfirmation = (message: string) => setConfirmationText(message);
+  const confirmSavedCheckIn = (eventId: string, userId: string) => {
+    const saved = recordCheckIn({ eventId, userId });
+    if (!saved.ok) {
+      setConfirmation({ ok: false, message: saved.reason });
+      toast({ title: "Check-in rejected", description: saved.reason, variant: "destructive" });
+      return;
+    }
+    const when = new Date(saved.record.checkedInAt).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
+    const message = `${saved.record.attendeeName} checked in for ${saved.record.eventTitle}. +${saved.record.pointsAwarded} pts at ${when}.`;
+    setConfirmation({ ok: true, message });
+    toast({ title: "Check-in confirmed", description: message });
+  };
 
   const handleScannerSubmit = () => {
     const result = validateCheckInToken(scannedToken.trim());
@@ -37,9 +48,8 @@ const TapIn = () => {
       toast({ title: "Scan rejected", description: result.reason, variant: "destructive" });
       return;
     }
-    showConfirmation("Attendance validated. Student check-in confirmed.");
     setScannedToken("");
-    toast({ title: "Check-in confirmed", description: "The student has been marked present." });
+    confirmSavedCheckIn(result.eventId, result.userId);
   };
 
   // Depend on the event id (a string), not the event object: the events list is
@@ -159,13 +169,13 @@ const TapIn = () => {
           </div>
         )}
 
-        {confirmationText && (
-          <div className="mt-6 w-full max-w-xs rounded-[12px] border border-success/40 bg-success/10 p-4">
+        {confirmation && (
+          <div className={`mt-6 w-full max-w-xs rounded-[12px] border p-4 ${confirmation.ok ? "border-success/40 bg-success/10" : "border-destructive/40 bg-destructive/10"}`}>
             <div className="flex items-start gap-2">
-              <CheckCircle2 className="h-5 w-5 text-success" />
+              <CheckCircle2 className={`h-5 w-5 ${confirmation.ok ? "text-success" : "text-destructive"}`} />
               <div>
-                <p className="text-sm font-semibold text-foreground">Check-in confirmed</p>
-                <p className="text-xs text-muted-foreground">{confirmationText}</p>
+                <p className="text-sm font-semibold text-foreground">{confirmation.ok ? "Check-in confirmed" : "Check-in rejected"}</p>
+                <p className="text-xs text-muted-foreground">{confirmation.message}</p>
               </div>
             </div>
           </div>
