@@ -22,6 +22,8 @@ const parseEventForm = (body: Record<string, unknown>) => {
 };
 const handleSchema = z.string().trim().transform(value => value.replace(/^@/, "")).pipe(z.string().regex(/^[A-Za-z0-9_]{3,30}$/, "Use 3 to 30 letters, numbers or underscores."));
 const organizationSchema = z.object({ name: z.string().trim().min(2).max(80), handle: handleSchema });
+const organizationUpdateSchema = z.object({ name: organizationSchema.shape.name.optional(), handle: handleSchema.optional() })
+  .refine(value => value.name !== undefined || value.handle !== undefined, { message: "Send a name, a handle, or both." });
 const slug = (name: string) => name.toLowerCase().replace(/[^a-z0-9]/g, "").slice(0, 20) || "org";
 // The organization as the client's OrgProfile expects it. Verification and follower counts
 // are not stored yet, so they are fixed at their defaults.
@@ -322,6 +324,42 @@ export const createApi = async (pool: Pool, options: { origin: string; secureCoo
     const found = (await organizations(res.locals.user.id, "WHERE o.id = $2", [idSchema.parse(req.params.id)]))[0];
     if (!found) return void res.status(404).json({ error: "Organization not found." });
     res.json(found);
+  });
+  // Leaders rename an organization or change its handle. Followers and events keep pointing at
+  // it, because they use its id.
+  app.put("/api/organizations/:id", async (req, res) => {
+    const user: User = res.locals.user;
+    const id = idSchema.parse(req.params.id);
+    const role = await organizationRole(id, user.id);
+    if (!role) return void res.status(404).json({ error: "Organization not found." });
+    if (role !== "leader") return void res.status(403).json({ error: "Only a leader can edit the organization." });
+    const changes = organizationUpdateSchema.parse(req.body ?? {});
+    try {
+      await pool.query(
+        "UPDATE api_organizations SET name = COALESCE($2, name), handle = COALESCE($3, handle) WHERE id = $1",
+        [id, changes.name ?? null, changes.handle ?? null],
+      );
+    } catch (error) {
+      if ((error as { code?: string }).code === "23505") return void res.status(409).json({ error: "That handle is already taken." });
+      throw error;
+    }
+    res.json((await organizations(user.id, "WHERE o.id = $2", [id]))[0]);
+  });
+  // An organization that still has events cannot be deleted, because deleting it would
+  // orphan or destroy them. Delete or finish the events first.
+  app.delete("/api/organizations/:id", async (req, res) => {
+    const user: User = res.locals.user;
+    const id = idSchema.parse(req.params.id);
+    const role = await organizationRole(id, user.id);
+    if (!role) return void res.status(404).json({ error: "Organization not found." });
+    if (role !== "leader") return void res.status(403).json({ error: "Only a leader can delete the organization." });
+    try {
+      await pool.query("DELETE FROM api_organizations WHERE id = $1", [id]);
+    } catch (error) {
+      if ((error as { code?: string }).code === "23503") return void res.status(409).json({ error: "This organization still has events. Delete them first." });
+      throw error;
+    }
+    res.sendStatus(204);
   });
   app.get("/api/organizations/:id/members", async (req, res) => {
     const user: User = res.locals.user;

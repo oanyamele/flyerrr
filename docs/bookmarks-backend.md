@@ -134,6 +134,8 @@ environment variables through the host. `PORT` defaults to 3001.
 | GET | `/api/organizations` | Lists the organizations the caller belongs to, with their `myRole` |
 | POST | `/api/organizations` | Officer-only. Creates an organization (`name`, `handle`); the creator becomes its leader. Taken handle returns 409 |
 | GET | `/api/organizations/:id` | Reads an organization's public profile and the caller's `myRole` (null for non-members) |
+| PUT | `/api/organizations/:id` | Changes an organization's name, handle, or both; leader only. Taken handle returns 409 |
+| DELETE | `/api/organizations/:id` | Deletes an organization and its memberships; leader only. Returns 409 while it still has events |
 | GET | `/api/organizations/:id/members` | Lists members; members only |
 | POST | `/api/organizations/:id/members` | Adds a registered account by email as `member` or `leader`, or changes an existing member's role; leader only |
 | DELETE | `/api/organizations/:id/members/:userId` | Removes a member; a leader, or the member removing themself |
