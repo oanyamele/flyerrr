@@ -2,16 +2,18 @@ import { useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { ArrowLeft, CalendarDays, Database, Download, Users } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { attendanceRecords, buildAttendanceCsv, getAttendanceSummary } from "@/data/attendanceStore";
+import { useRepositories } from "@/repositories/useRepositories";
 
 const AttendanceReports = () => {
   const navigate = useNavigate();
-  const summary = useMemo(() => getAttendanceSummary(attendanceRecords), []);
-  const totalCheckIns = attendanceRecords.length;
+  const { attendance } = useRepositories();
+  const records = attendance.listAttendance();
+  const summary = useMemo(() => attendance.summarizeAttendance(), [attendance]);
+  const totalCheckIns = records.length;
   const totalEvents = summary.length;
 
   const downloadCsv = () => {
-    const csv = buildAttendanceCsv(attendanceRecords);
+    const csv = attendance.exportAttendanceCsv();
     const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
     const url = URL.createObjectURL(blob);
     const link = document.createElement("a");

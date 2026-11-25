@@ -1,0 +1,19 @@
+# Pull requests that touch a module below request that module's owner.
+# Owners are recorded in the README data-layer section.
+# The last matching line wins, so file rules override the directory default.
+
+/src/data/ @neaylasimone
+/src/contexts/ @neaylasimone
+
+/src/data/appDatabase.ts @neaylasimone
+/src/data/attendanceStore.ts @neaylasimone
+/src/data/checkInStore.ts @neaylasimone
+/src/contexts/AuthContext.tsx @neaylasimone
+/src/contexts/FollowContext.tsx @neaylasimone
+
+/src/data/bookmarks.ts @Brian-Two
+/src/data/bookmarks.test.ts @Brian-Two
+/src/data/repository.ts @Brian-Two
+
+/src/data/mockEvents.ts @nadcaesar
+/src/contexts/ThemeContext.tsx @nadcaesar
