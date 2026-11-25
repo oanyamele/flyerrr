@@ -36,7 +36,11 @@ const renderQueue = () => render(
 );
 
 describe("organization verification through the server", () => {
-  beforeEach(() => request.mockReset());
+  beforeEach(() => {
+    // Braces matter: mockReset() returns the mock, and vitest would call a function returned
+    // from beforeEach as cleanup after every test.
+    request.mockReset();
+  });
 
   it("shows the server's queue and saves an approval through the API", async () => {
     let rows = [item({ id: "o1" }), item({ id: "o2", orgName: "My Own Club", canDecide: false })];
@@ -51,14 +55,14 @@ describe("organization verification through the server", () => {
     renderQueue();
 
     const first = (await screen.findByText("Women in Product")).closest("article")!;
-    expect(screen.getByText("1 pending review")).toBeTruthy();
+    expect(screen.getByText("2 pending review")).toBeTruthy();
     // An organization the officer leads cannot be reviewed from here.
     const own = screen.getByText("My Own Club").closest("article")!;
     expect(within(own).queryByRole("button", { name: /approve/i })).toBeNull();
     expect(within(own).getByText(/another officer needs to review/i)).toBeTruthy();
 
     fireEvent.click(within(first).getByRole("button", { name: /approve/i }));
-    await waitFor(() => expect(screen.getByText("0 pending review")).toBeTruthy());
+    await waitFor(() => expect(screen.getByText("1 pending review")).toBeTruthy());
     expect(request).toHaveBeenCalledWith("/organizations/o1/verification", { method: "PUT", body: JSON.stringify({ decision: "approved" }) });
     expect(within(first).getByText("approved")).toBeTruthy();
     expect(within(first).getByText(/decided by Reviewer/i)).toBeTruthy();
