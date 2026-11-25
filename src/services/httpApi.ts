@@ -1,7 +1,8 @@
 export const useHttpBackend = import.meta.env.VITE_DATA_BACKEND === "http";
 
 export class ApiError extends Error {
-  constructor(message: string, public readonly status: number) { super(message); }
+  /** `body` is the server's JSON error response, so callers can read fields such as `code`. */
+  constructor(message: string, public readonly status: number, public readonly body: Record<string, unknown> = {}) { super(message); }
 }
 
 export const apiRequest = async <T,>(path: string, init?: RequestInit): Promise<T> => {
@@ -11,7 +12,7 @@ export const apiRequest = async <T,>(path: string, init?: RequestInit): Promise<
   });
   if (!response.ok) {
     const body = await response.json().catch(() => ({}));
-    throw new ApiError(body.error ?? "Unable to complete this request. Try again.", response.status);
+    throw new ApiError(body.error ?? "Unable to complete this request. Try again.", response.status, body);
   }
   return response.status === 204 ? undefined as T : response.json();
 };
