@@ -94,6 +94,15 @@ officer-created local-only events are not silently uploaded.
 
 ## API contract
 
+The full contract, with every route, request body, response and error, is in
+[`docs/openapi.json`](./openapi.json) (OpenAPI 3.1). Open it in any OpenAPI viewer, for
+example by pasting it into the Swagger Editor. `server/openapi.test.ts` runs with
+`bun run test:api` and in CI. It fails when a route in `server/app.ts` is missing from the
+contract, or is documented but no longer served, so a route change and its contract change
+go in the same pull request. The test checks routes, operation ids, path parameters and
+schema references. It does not check request and response bodies against the schemas, so
+update those by hand when a body changes. The table below is a summary.
+
 All routes are same-site; writes require an `Origin` matching `APP_ORIGIN`.
 For production, set `NODE_ENV=production`, an HTTPS `APP_ORIGIN`, and a protected
 `DATABASE_URL`. Secure cookies are enabled in production. Serve `/api` through

@@ -1,0 +1,2113 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Flyerrr API",
+    "version": "1.0.0",
+    "description": "HTTP API for accounts, events, organizations and bookmarks. This file is the contract: `server/openapi.test.ts` fails when a route in `server/app.ts` is missing from it, or documented here but not served.\n\nEvery route except `/api/health` and `/api/auth/*` needs the session cookie. Every write (anything but GET, HEAD and OPTIONS) must send an `Origin` header matching the server's `APP_ORIGIN`, or it gets 403. Unknown `/api` paths return 404 with `{ \"error\": \"Endpoint not found.\" }`. A request body over 12 MB returns 413; invalid JSON returns 400."
+  },
+  "servers": [
+    {
+      "url": "/",
+      "description": "Same origin as the web app. Vite proxies /api to the API in development."
+    }
+  ],
+  "tags": [
+    {
+      "name": "System"
+    },
+    {
+      "name": "Auth"
+    },
+    {
+      "name": "Events"
+    },
+    {
+      "name": "Organizations"
+    },
+    {
+      "name": "Bookmarks"
+    }
+  ],
+  "security": [
+    {
+      "sessionCookie": []
+    }
+  ],
+  "paths": {
+    "/api/health": {
+      "get": {
+        "summary": "Check the server and database",
+        "operationId": "getHealth",
+        "tags": [
+          "System"
+        ],
+        "responses": {
+          "200": {
+            "description": "The server can reach PostgreSQL.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "ok"
+                  ],
+                  "properties": {
+                    "ok": {
+                      "type": "boolean",
+                      "const": true
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unexpected server error. Nothing about the failure is exposed.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "security": []
+      }
+    },
+    "/api/auth/session": {
+      "get": {
+        "summary": "Read the current session",
+        "operationId": "getSession",
+        "tags": [
+          "Auth"
+        ],
+        "description": "Always succeeds. Without a valid cookie it returns `isLoggedIn: false`.",
+        "responses": {
+          "200": {
+            "description": "The session.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Session"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unexpected server error. Nothing about the failure is exposed.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "security": []
+      }
+    },
+    "/api/auth/register": {
+      "post": {
+        "summary": "Create a student account and sign in",
+        "operationId": "register",
+        "tags": [
+          "Auth"
+        ],
+        "description": "New accounts are always students; the request cannot choose a role. Sets the session cookie. Limited to 30 attempts per IP and per email in 15 minutes.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RegisterRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Account created and signed in.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Session"
+                }
+              }
+            },
+            "headers": {
+              "Set-Cookie": {
+                "description": "The `flyerrr_session` cookie.",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation failed. `fields` lists messages per field when the request body was invalid; a malformed UUID in the path or an unparsable JSON body also returns 400.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "A write request whose `Origin` header does not match the server's configured `APP_ORIGIN`.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "An account with these details cannot be created.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too many attempts. See `Retry-After`.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unexpected server error. Nothing about the failure is exposed.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "security": []
+      }
+    },
+    "/api/auth/login": {
+      "post": {
+        "summary": "Sign in",
+        "operationId": "login",
+        "tags": [
+          "Auth"
+        ],
+        "description": "Sets the session cookie. Limited to 30 attempts per IP and per email in 15 minutes.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LoginRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Signed in.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Session"
+                }
+              }
+            },
+            "headers": {
+              "Set-Cookie": {
+                "description": "The `flyerrr_session` cookie.",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation failed. `fields` lists messages per field when the request body was invalid; a malformed UUID in the path or an unparsable JSON body also returns 400.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Invalid email or password.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "A write request whose `Origin` header does not match the server's configured `APP_ORIGIN`.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too many attempts. See `Retry-After`.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unexpected server error. Nothing about the failure is exposed.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "security": []
+      }
+    },
+    "/api/auth/logout": {
+      "post": {
+        "summary": "Sign out",
+        "operationId": "logout",
+        "tags": [
+          "Auth"
+        ],
+        "description": "Revokes the session and clears the cookie. Succeeds even if no one is signed in.",
+        "responses": {
+          "204": {
+            "description": "Signed out."
+          },
+          "403": {
+            "description": "A write request whose `Origin` header does not match the server's configured `APP_ORIGIN`.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unexpected server error. Nothing about the failure is exposed.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "security": []
+      }
+    },
+    "/api/events": {
+      "get": {
+        "summary": "List events",
+        "operationId": "listEvents",
+        "tags": [
+          "Events"
+        ],
+        "description": "Needs a signed-in session. Newest first. `saved` reflects the caller's bookmarks.",
+        "responses": {
+          "200": {
+            "description": "All events.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Event"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "No valid session cookie.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unexpected server error. Nothing about the failure is exposed.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "summary": "Publish an event",
+        "operationId": "createEvent",
+        "tags": [
+          "Events"
+        ],
+        "description": "Officers only. The event belongs to an organization the caller leads: the one in `organizationId`, else the only one they lead. An officer who leads none gets a default organization created. An officer who leads several must send `organizationId`.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/EventCreateRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "The new event.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Event"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation failed, the start is not in the future, or the caller leads several organizations and sent no `organizationId`.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "No valid session cookie.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "The caller is not an officer, is not a leader of the named organization, or the `Origin` is not allowed.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unexpected server error. Nothing about the failure is exposed.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/events/{id}": {
+      "get": {
+        "summary": "Read an event",
+        "operationId": "getEvent",
+        "tags": [
+          "Events"
+        ],
+        "description": "Needs a signed-in session.",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "description": "Event id.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The event.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Event"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation failed. `fields` lists messages per field when the request body was invalid; a malformed UUID in the path or an unparsable JSON body also returns 400.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "No valid session cookie.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such event.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unexpected server error. Nothing about the failure is exposed.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "summary": "Edit an event",
+        "operationId": "updateEvent",
+        "tags": [
+          "Events"
+        ],
+        "description": "Replaces the editable fields. Allowed for the event's owner (its creator or a leader of its organization) and for invited editors. The creator, organization, counters and creation time never change.",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "description": "Event id.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/EventUpdateRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "The updated event.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Event"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation failed. `fields` lists messages per field when the request body was invalid; a malformed UUID in the path or an unparsable JSON body also returns 400.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "No valid session cookie.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "The caller is not an owner or editor of this event, or the `Origin` is not allowed.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such event.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unexpected server error. Nothing about the failure is exposed.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "summary": "Delete an event",
+        "operationId": "deleteEvent",
+        "tags": [
+          "Events"
+        ],
+        "description": "Owner only. Also removes the event's saves and editors.",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "description": "Event id.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Deleted."
+          },
+          "400": {
+            "description": "Validation failed. `fields` lists messages per field when the request body was invalid; a malformed UUID in the path or an unparsable JSON body also returns 400.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "No valid session cookie.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "The caller is not an owner, or the `Origin` is not allowed.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such event.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unexpected server error. Nothing about the failure is exposed.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/events/{id}/editors": {
+      "get": {
+        "summary": "List an event's invited editors",
+        "operationId": "listEventEditors",
+        "tags": [
+          "Events"
+        ],
+        "description": "Owner or invited editor.",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "description": "Event id.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The editors.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/EventEditor"
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation failed. `fields` lists messages per field when the request body was invalid; a malformed UUID in the path or an unparsable JSON body also returns 400.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "No valid session cookie.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "The caller is neither an owner nor an editor.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such event.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unexpected server error. Nothing about the failure is exposed.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "summary": "Invite an editor",
+        "operationId": "addEventEditor",
+        "tags": [
+          "Events"
+        ],
+        "description": "Owner only. Any registered account can be invited, officer or student, and gets access immediately. No email is sent. An address with no account returns 404, so the owner can learn whether an account exists.",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "description": "Event id.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/EmailRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "That account was already an editor.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EventEditor"
+                }
+              }
+            }
+          },
+          "201": {
+            "description": "Editor added.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EventEditor"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid email, or the caller already owns the event.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "No valid session cookie.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "The caller is not an owner, or the `Origin` is not allowed.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such event, or no account for that email.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unexpected server error. Nothing about the failure is exposed.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/events/{id}/editors/{userId}": {
+      "delete": {
+        "summary": "Remove an editor",
+        "operationId": "removeEventEditor",
+        "tags": [
+          "Events"
+        ],
+        "description": "An owner can remove anyone. An editor can remove only themself. Removing someone who is not an editor still succeeds.",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "description": "Event id.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "userId",
+            "in": "path",
+            "required": true,
+            "description": "Account id.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Removed."
+          },
+          "400": {
+            "description": "Validation failed. `fields` lists messages per field when the request body was invalid; a malformed UUID in the path or an unparsable JSON body also returns 400.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "No valid session cookie.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "The caller is not an owner and is removing someone else, or the `Origin` is not allowed.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such event.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unexpected server error. Nothing about the failure is exposed.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/organizations": {
+      "get": {
+        "summary": "List my organizations",
+        "operationId": "listOrganizations",
+        "tags": [
+          "Organizations"
+        ],
+        "description": "Needs a signed-in session. Only organizations the caller belongs to.",
+        "responses": {
+          "200": {
+            "description": "The caller's organizations.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Organization"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "No valid session cookie.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unexpected server error. Nothing about the failure is exposed.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "summary": "Create an organization",
+        "operationId": "createOrganization",
+        "tags": [
+          "Organizations"
+        ],
+        "description": "Officers only. The creator becomes its leader.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/OrganizationCreateRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "The new organization.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Organization"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation failed. `fields` lists messages per field when the request body was invalid; a malformed UUID in the path or an unparsable JSON body also returns 400.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "No valid session cookie.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "The caller is not an officer, or the `Origin` is not allowed.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "That handle is already taken (compared ignoring case).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unexpected server error. Nothing about the failure is exposed.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/organizations/{id}": {
+      "get": {
+        "summary": "Read an organization",
+        "operationId": "getOrganization",
+        "tags": [
+          "Organizations"
+        ],
+        "description": "Needs a signed-in session. Any signed-in account can read an organization's profile. `myRole` is null for non-members.",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "description": "Organization id.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The organization.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Organization"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation failed. `fields` lists messages per field when the request body was invalid; a malformed UUID in the path or an unparsable JSON body also returns 400.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "No valid session cookie.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such organization.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unexpected server error. Nothing about the failure is exposed.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/organizations/{id}/members": {
+      "get": {
+        "summary": "List members",
+        "operationId": "listOrganizationMembers",
+        "tags": [
+          "Organizations"
+        ],
+        "description": "Members only.",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "description": "Organization id.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The members.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/OrganizationMember"
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation failed. `fields` lists messages per field when the request body was invalid; a malformed UUID in the path or an unparsable JSON body also returns 400.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "No valid session cookie.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "The caller is not a member.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unexpected server error. Nothing about the failure is exposed.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "summary": "Add a member or change a member's role",
+        "operationId": "addOrganizationMember",
+        "tags": [
+          "Organizations"
+        ],
+        "description": "Leaders only. Any registered account can be added, officer or student. Adding an existing member changes their role. An organization always keeps at least one leader.",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "description": "Organization id.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/OrganizationMemberRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "An existing member's role was set.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OrganizationMember"
+                }
+              }
+            }
+          },
+          "201": {
+            "description": "Member added.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OrganizationMember"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation failed. `fields` lists messages per field when the request body was invalid; a malformed UUID in the path or an unparsable JSON body also returns 400.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "No valid session cookie.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "The caller is not a leader, or the `Origin` is not allowed.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "The caller is not a member of this organization, or no account exists for that email.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "This would leave the organization without a leader.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unexpected server error. Nothing about the failure is exposed.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/organizations/{id}/members/{userId}": {
+      "delete": {
+        "summary": "Remove a member",
+        "operationId": "removeOrganizationMember",
+        "tags": [
+          "Organizations"
+        ],
+        "description": "A leader can remove anyone. A member can remove only themself. The last leader cannot be removed.",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "description": "Organization id.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "userId",
+            "in": "path",
+            "required": true,
+            "description": "Account id.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Removed."
+          },
+          "400": {
+            "description": "Validation failed. `fields` lists messages per field when the request body was invalid; a malformed UUID in the path or an unparsable JSON body also returns 400.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "No valid session cookie.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "The caller is not a leader and is removing someone else, or the `Origin` is not allowed.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "The caller is not a member of this organization.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "This would leave the organization without a leader.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unexpected server error. Nothing about the failure is exposed.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/bookmarks": {
+      "get": {
+        "summary": "List my saved events",
+        "operationId": "listBookmarks",
+        "tags": [
+          "Bookmarks"
+        ],
+        "description": "Needs a signed-in session. Soonest first.",
+        "responses": {
+          "200": {
+            "description": "The caller's saved events.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Event"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "No valid session cookie.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unexpected server error. Nothing about the failure is exposed.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/bookmarks/{id}": {
+      "put": {
+        "summary": "Save an event",
+        "operationId": "saveBookmark",
+        "tags": [
+          "Bookmarks"
+        ],
+        "description": "Idempotent.",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "description": "Event id.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Saved."
+          },
+          "400": {
+            "description": "Validation failed. `fields` lists messages per field when the request body was invalid; a malformed UUID in the path or an unparsable JSON body also returns 400.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "No valid session cookie.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "A write request whose `Origin` header does not match the server's configured `APP_ORIGIN`.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such event.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unexpected server error. Nothing about the failure is exposed.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "summary": "Remove a saved event",
+        "operationId": "removeBookmark",
+        "tags": [
+          "Bookmarks"
+        ],
+        "description": "Idempotent: succeeds even if it was not saved.",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "description": "Event id.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Removed."
+          },
+          "400": {
+            "description": "Validation failed. `fields` lists messages per field when the request body was invalid; a malformed UUID in the path or an unparsable JSON body also returns 400.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "No valid session cookie.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "A write request whose `Origin` header does not match the server's configured `APP_ORIGIN`.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unexpected server error. Nothing about the failure is exposed.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "securitySchemes": {
+      "sessionCookie": {
+        "type": "apiKey",
+        "in": "cookie",
+        "name": "flyerrr_session",
+        "description": "HttpOnly, SameSite=Lax cookie set by register and login. Valid for 7 days."
+      }
+    },
+    "schemas": {
+      "Error": {
+        "type": "object",
+        "required": [
+          "error"
+        ],
+        "properties": {
+          "error": {
+            "type": "string"
+          },
+          "fields": {
+            "type": "object",
+            "description": "Messages per field name (validation failures only).",
+            "additionalProperties": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          }
+        }
+      },
+      "Session": {
+        "type": "object",
+        "required": [
+          "isLoggedIn",
+          "role",
+          "userName"
+        ],
+        "properties": {
+          "isLoggedIn": {
+            "type": "boolean"
+          },
+          "userId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "userName": {
+            "type": "string"
+          },
+          "email": {
+            "type": "string",
+            "format": "email"
+          },
+          "role": {
+            "type": "string",
+            "enum": [
+              "student",
+              "org_officer"
+            ]
+          }
+        },
+        "description": "When `isLoggedIn` is false only `role` (student) and an empty `userName` are present."
+      },
+      "RegisterRequest": {
+        "type": "object",
+        "required": [
+          "name",
+          "email",
+          "password"
+        ],
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 2,
+            "maxLength": 100
+          },
+          "email": {
+            "type": "string",
+            "format": "email",
+            "maxLength": 254,
+            "description": "Must end in @howard.edu."
+          },
+          "password": {
+            "type": "string",
+            "minLength": 8,
+            "maxLength": 128,
+            "description": "Needs a lowercase letter, an uppercase letter and a number."
+          }
+        }
+      },
+      "LoginRequest": {
+        "type": "object",
+        "required": [
+          "email",
+          "password"
+        ],
+        "properties": {
+          "email": {
+            "type": "string",
+            "format": "email",
+            "maxLength": 254
+          },
+          "password": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128
+          }
+        }
+      },
+      "EmailRequest": {
+        "type": "object",
+        "required": [
+          "email"
+        ],
+        "properties": {
+          "email": {
+            "type": "string",
+            "format": "email",
+            "maxLength": 254
+          }
+        }
+      },
+      "OrgProfile": {
+        "type": "object",
+        "required": [
+          "id",
+          "name",
+          "handle",
+          "avatar",
+          "verified",
+          "followerCount"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "name": {
+            "type": "string"
+          },
+          "handle": {
+            "type": "string",
+            "description": "With a leading @.",
+            "example": "@debate_club"
+          },
+          "avatar": {
+            "type": "string",
+            "description": "The first two letters of the name, uppercased."
+          },
+          "verified": {
+            "type": "boolean",
+            "description": "Not stored yet; always false."
+          },
+          "followerCount": {
+            "type": "integer",
+            "description": "Not stored yet; always 0."
+          }
+        }
+      },
+      "Organization": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/OrgProfile"
+          },
+          {
+            "type": "object",
+            "required": [
+              "myRole"
+            ],
+            "properties": {
+              "myRole": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "enum": [
+                  "member",
+                  "leader",
+                  null
+                ],
+                "description": "The caller's role, or null for a non-member."
+              }
+            }
+          }
+        ]
+      },
+      "OrganizationCreateRequest": {
+        "type": "object",
+        "required": [
+          "name",
+          "handle"
+        ],
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 2,
+            "maxLength": 80
+          },
+          "handle": {
+            "type": "string",
+            "pattern": "^@?[A-Za-z0-9_]{3,30}$",
+            "description": "A leading @ is accepted and removed. Unique ignoring case."
+          }
+        }
+      },
+      "OrganizationMember": {
+        "type": "object",
+        "required": [
+          "userId",
+          "name",
+          "email",
+          "role"
+        ],
+        "properties": {
+          "userId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "name": {
+            "type": "string"
+          },
+          "email": {
+            "type": "string",
+            "format": "email"
+          },
+          "role": {
+            "type": "string",
+            "enum": [
+              "member",
+              "leader"
+            ]
+          }
+        }
+      },
+      "OrganizationMemberRequest": {
+        "type": "object",
+        "required": [
+          "email"
+        ],
+        "properties": {
+          "email": {
+            "type": "string",
+            "format": "email",
+            "maxLength": 254
+          },
+          "role": {
+            "type": "string",
+            "enum": [
+              "member",
+              "leader"
+            ],
+            "default": "member"
+          }
+        }
+      },
+      "EventEditor": {
+        "type": "object",
+        "required": [
+          "userId",
+          "name",
+          "email"
+        ],
+        "properties": {
+          "userId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "name": {
+            "type": "string"
+          },
+          "email": {
+            "type": "string",
+            "format": "email"
+          },
+          "addedAt": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Present when listing editors."
+          }
+        }
+      },
+      "EventUpdateRequest": {
+        "type": "object",
+        "required": [
+          "title",
+          "description",
+          "category",
+          "date",
+          "time",
+          "startsAt",
+          "location",
+          "tags",
+          "image"
+        ],
+        "properties": {
+          "title": {
+            "type": "string",
+            "minLength": 3,
+            "maxLength": 200
+          },
+          "description": {
+            "type": "string",
+            "minLength": 10
+          },
+          "category": {
+            "type": "string",
+            "enum": [
+              "social",
+              "academic",
+              "career",
+              "sports",
+              "arts"
+            ]
+          },
+          "date": {
+            "type": "string",
+            "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+            "description": "Local calendar date shown to people."
+          },
+          "time": {
+            "type": "string",
+            "pattern": "^([01]\\d|2[0-3]):[0-5]\\d$",
+            "description": "Local time shown to people, 24-hour."
+          },
+          "startsAt": {
+            "type": "string",
+            "format": "date-time",
+            "description": "The same moment as `date` and `time` in `timezone`, with an offset. Must be in the future."
+          },
+          "timezone": {
+            "type": "string",
+            "default": "UTC",
+            "description": "IANA time zone, such as America/New_York."
+          },
+          "location": {
+            "type": "string",
+            "minLength": 3
+          },
+          "capacity": {
+            "type": [
+              "integer",
+              "string"
+            ],
+            "minimum": 1,
+            "maximum": 10000,
+            "description": "Whole number from 1 to 10,000. Defaults to 100 when empty."
+          },
+          "tags": {
+            "description": "Tag names, as an array or one comma-separated string.",
+            "oneOf": [
+              {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              },
+              {
+                "type": "string"
+              }
+            ]
+          },
+          "image": {
+            "type": "string",
+            "maxLength": 11000000,
+            "pattern": "^(https://|/(?!/)|data:image/(png|jpeg|webp);base64,)",
+            "description": "An https URL, a site-relative path, or a base64 png, jpeg or webp data URL."
+          }
+        }
+      },
+      "EventCreateRequest": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/EventUpdateRequest"
+          },
+          {
+            "type": "object",
+            "properties": {
+              "organizationId": {
+                "type": "string",
+                "format": "uuid",
+                "description": "The organization to publish for. The caller must lead it. Optional; see the operation description."
+              }
+            }
+          }
+        ]
+      },
+      "Event": {
+        "type": "object",
+        "required": [
+          "id",
+          "title",
+          "description",
+          "category",
+          "date",
+          "time",
+          "location",
+          "capacity",
+          "tags",
+          "image",
+          "org",
+          "saved",
+          "attendees",
+          "likes",
+          "friendsGoing",
+          "createdAt",
+          "createdByUserId"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "title": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          },
+          "category": {
+            "type": "string",
+            "enum": [
+              "social",
+              "academic",
+              "career",
+              "sports",
+              "arts"
+            ]
+          },
+          "date": {
+            "type": "string"
+          },
+          "time": {
+            "type": "string"
+          },
+          "location": {
+            "type": "string"
+          },
+          "capacity": {
+            "type": "integer"
+          },
+          "tags": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "image": {
+            "type": "string"
+          },
+          "org": {
+            "$ref": "#/components/schemas/OrgProfile"
+          },
+          "saved": {
+            "type": "boolean",
+            "description": "Whether the caller has saved this event."
+          },
+          "attendees": {
+            "type": "integer"
+          },
+          "likes": {
+            "type": "integer"
+          },
+          "friendsGoing": {
+            "type": "array",
+            "items": {},
+            "description": "Not populated by the API yet."
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "createdByUserId": {
+            "type": "string",
+            "format": "uuid"
+          }
+        }
+      }
+    }
+  }
+}
