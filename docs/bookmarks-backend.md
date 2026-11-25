@@ -111,9 +111,27 @@ environment variables through the host. `PORT` defaults to 3001.
 | GET | `/api/events` | Lists shared events with the caller's saved state |
 | GET | `/api/events/:id` | Reads an event; unknown UUID returns 404 |
 | POST | `/api/events` | Officer-only publish, using shared event validation |
+| PUT | `/api/events/:id` | Replaces an event's editable fields; creator or invited editor only |
+| DELETE | `/api/events/:id` | Deletes an event with its saves and editors; creator only |
+| GET | `/api/events/:id/editors` | Lists invited editors; creator or invited editor only |
+| POST | `/api/events/:id/editors` | Invites a registered account (officer or student) by email; creator only |
+| DELETE | `/api/events/:id/editors/:userId` | Removes an editor; creator, or the editor removing themself |
 | GET | `/api/bookmarks` | Lists only the caller's saved events |
 | PUT | `/api/bookmarks/:id` | Idempotently saves an existing event |
 | DELETE | `/api/bookmarks/:id` | Idempotently removes the caller's save |
+
+**Event permissions.** The officer who publishes an event owns it. The owner can
+edit it, delete it, and invite other people to edit it. Permissions are per event,
+not by account role: an invited editor can be any registered account, officer or
+student. An editor can edit the event and see its editors, but cannot delete it,
+invite anyone, or remove other editors (they can remove themself). Everyone else
+gets 403. Only officers can publish new events.
+Editing uses the same validation as publishing, so an event must still be in the
+future to be saved. Edits never change the owner, organization, counters or creation
+time. Inviting gives an existing account access immediately and sends no email. The
+person must have signed up first: an email with no account returns 404, because
+access goes to an account, not to an unverified address. This also means an event's
+owner can learn whether a given address has an account.
 
 Bookmarks have a composite primary key `(user_id, event_id)` and foreign keys
 with cascading deletion. Client-supplied user IDs and roles never select an

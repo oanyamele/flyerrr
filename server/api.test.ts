@@ -114,4 +114,77 @@ describe("PostgreSQL bookmark API", () => {
     await pool.query("UPDATE api_sessions SET expires_at=now()-interval '1 second' WHERE user_id=$1", [alice.user.userId]);
     assert.equal((await request("/bookmarks", cookie)).status, 401);
   });
+
+  it("lets the creator edit, delete, and invite other accounts to edit an event", async () => {
+    const owner = await register("owner@howard.edu");
+    const editor = await register("editor@howard.edu");
+    const other = await register("other-officer@howard.edu");
+    const student = await register("plain-student@howard.edu");
+    await pool.query("UPDATE api_users SET role='org_officer' WHERE id = ANY($1::uuid[])", [[owner.user.userId, editor.user.userId, other.user.userId]]);
+    const created = eventSchema.parse(await (await request("/events", owner.cookie, "POST", eventBody())).json());
+    const path = `/events/${created.id}`;
+    const edited = { ...eventBody(), title: "Edited by the creator" };
+
+    // Students and uninvited officers cannot edit; bad input and unknown events are rejected.
+    assert.equal((await request(path, student.cookie, "PUT", edited)).status, 403);
+    assert.equal((await request(path, other.cookie, "PUT", edited)).status, 403);
+    assert.equal((await request(`/events/${randomUUID()}`, owner.cookie, "PUT", edited)).status, 404);
+    assert.equal((await request("/events/not-a-uuid", owner.cookie, "PUT", edited)).status, 400);
+    assert.equal((await request(path, owner.cookie, "PUT", { ...edited, capacity: 0 })).status, 400);
+
+    // The creator edits; a request body cannot reassign ownership.
+    const updated = await request(path, owner.cookie, "PUT", { ...edited, createdByUserId: other.user.userId });
+    assert.equal(updated.status, 200);
+    const updatedEvent = z.object({ title: z.string(), createdByUserId: z.string() }).parse(await updated.json());
+    assert.equal(updatedEvent.title, "Edited by the creator");
+    assert.equal(updatedEvent.createdByUserId, owner.user.userId);
+    assert.equal(eventSchema.parse(await (await request(path, student.cookie)).json()).title, "Edited by the creator");
+
+    // Only the creator can invite, and the invited person must already have an account.
+    const editors = `${path}/editors`;
+    assert.equal((await request(editors, other.cookie, "POST", { email: "editor@howard.edu" })).status, 403);
+    assert.equal((await request(editors, owner.cookie, "POST", { email: "nobody@howard.edu" })).status, 404);
+    assert.equal((await request(editors, owner.cookie, "POST", { email: "owner@howard.edu" })).status, 400);
+    assert.equal((await request(editors, owner.cookie, "POST", { email: "not an email" })).status, 400);
+    assert.equal((await request(editors, owner.cookie, "POST", { email: "EDITOR@howard.edu" })).status, 201);
+    assert.equal((await request(editors, owner.cookie, "POST", { email: "editor@howard.edu" })).status, 200);
+
+    // Any registered account can be invited, including a plain student account.
+    assert.equal((await request(editors, owner.cookie, "POST", { email: "plain-student@howard.edu" })).status, 201);
+    const byStudent = await request(path, student.cookie, "PUT", { ...eventBody(), title: "Edited by an invited student" });
+    assert.equal(byStudent.status, 200);
+    assert.equal(eventSchema.parse(await byStudent.json()).title, "Edited by an invited student");
+    assert.equal((await request(editors, student.cookie, "POST", { email: "other-officer@howard.edu" })).status, 403);
+
+    // An invited editor can edit and see the editors, but cannot delete, invite, or remove others.
+    const second = await request(path, editor.cookie, "PUT", { ...eventBody(), title: "Edited by an invited officer" });
+    assert.equal(second.status, 200);
+    assert.equal(eventSchema.parse(await second.json()).title, "Edited by an invited officer");
+    assert.equal((await request(path, editor.cookie, "DELETE")).status, 403);
+    assert.equal((await request(editors, editor.cookie, "POST", { email: "other-officer@howard.edu" })).status, 403);
+    assert.equal((await request(`${editors}/${other.user.userId}`, editor.cookie, "DELETE")).status, 403);
+    const listed = z.array(z.object({ userId: z.string(), email: z.string() })).parse(await (await request(editors, editor.cookie)).json());
+    assert.deepEqual(listed.map(item => item.email).sort(), ["editor@howard.edu", "plain-student@howard.edu"]);
+    assert.equal((await request(editors, other.cookie)).status, 403);
+
+    // The creator can remove an editor, and an editor can leave on their own.
+    assert.equal((await request(`${editors}/${editor.user.userId}`, owner.cookie, "DELETE")).status, 204);
+    assert.equal((await request(path, editor.cookie, "PUT", edited)).status, 403);
+    assert.equal((await request(editors, owner.cookie, "POST", { email: "editor@howard.edu" })).status, 201);
+    assert.equal((await request(`${editors}/${editor.user.userId}`, editor.cookie, "DELETE")).status, 204);
+    assert.equal((await request(path, editor.cookie, "PUT", edited)).status, 403);
+    assert.equal((await request(`${editors}/${student.user.userId}`, student.cookie, "DELETE")).status, 204);
+    assert.equal((await request(path, student.cookie, "PUT", edited)).status, 403);
+
+    // Only the creator can delete, and deleting removes saves and editors with the event.
+    assert.equal((await request(editors, owner.cookie, "POST", { email: "editor@howard.edu" })).status, 201);
+    assert.equal((await request(`/bookmarks/${created.id}`, student.cookie, "PUT")).status, 204);
+    assert.equal((await request(path, other.cookie, "DELETE")).status, 403);
+    assert.equal((await request(path, student.cookie, "DELETE")).status, 403);
+    assert.equal((await request(path, owner.cookie, "DELETE")).status, 204);
+    assert.equal((await request(path, owner.cookie)).status, 404);
+    assert.equal((await request(path, owner.cookie, "DELETE")).status, 404);
+    assert.equal((await pool.query("SELECT count(*) FROM api_event_saves WHERE event_id=$1", [created.id])).rows[0].count, "0");
+    assert.equal((await pool.query("SELECT count(*) FROM api_event_editors WHERE event_id=$1", [created.id])).rows[0].count, "0");
+  });
 });
