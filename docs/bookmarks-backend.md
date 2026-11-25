@@ -45,7 +45,7 @@ durable state to migrate. Demo accounts and passwords are not copied to the API.
 ## Database migrations
 
 Schema changes live in `server/migrations/` as numbered SQL files
-(`001_bookmarks.sql`, `002_....sql`, and so on). The runner in `server/database.ts`
+(`001_bookmarks.sql`, `002_event_editors.sql`, `003_organizations.sql`, and so on). The runner in `server/database.ts`
 applies them in name order and records each one in a `schema_migrations` table with
 a SHA-256 checksum. Running it again does nothing.
 
@@ -110,24 +110,47 @@ environment variables through the host. `PORT` defaults to 3001.
 | POST | `/api/auth/logout` | Revokes the session and clears its cookie |
 | GET | `/api/events` | Lists shared events with the caller's saved state |
 | GET | `/api/events/:id` | Reads an event; unknown UUID returns 404 |
-| POST | `/api/events` | Officer-only publish, using shared event validation |
-| PUT | `/api/events/:id` | Replaces an event's editable fields; creator or invited editor only |
-| DELETE | `/api/events/:id` | Deletes an event with its saves and editors; creator only |
+| POST | `/api/events` | Officer-only publish, using shared event validation. Optional `organizationId` (see below) |
+| PUT | `/api/events/:id` | Replaces an event's editable fields; owner or invited editor only |
+| DELETE | `/api/events/:id` | Deletes an event with its saves and editors; owner only |
 | GET | `/api/events/:id/editors` | Lists invited editors; creator or invited editor only |
-| POST | `/api/events/:id/editors` | Invites a registered account (officer or student) by email; creator only |
-| DELETE | `/api/events/:id/editors/:userId` | Removes an editor; creator, or the editor removing themself |
+| POST | `/api/events/:id/editors` | Invites a registered account (officer or student) by email; owner only |
+| DELETE | `/api/events/:id/editors/:userId` | Removes an editor; owner, or the editor removing themself |
+| GET | `/api/organizations` | Lists the organizations the caller belongs to, with their `myRole` |
+| POST | `/api/organizations` | Officer-only. Creates an organization (`name`, `handle`); the creator becomes its leader. Taken handle returns 409 |
+| GET | `/api/organizations/:id` | Reads an organization's public profile and the caller's `myRole` (null for non-members) |
+| GET | `/api/organizations/:id/members` | Lists members; members only |
+| POST | `/api/organizations/:id/members` | Adds a registered account by email as `member` or `leader`, or changes an existing member's role; leader only |
+| DELETE | `/api/organizations/:id/members/:userId` | Removes a member; a leader, or the member removing themself |
 | GET | `/api/bookmarks` | Lists only the caller's saved events |
 | PUT | `/api/bookmarks/:id` | Idempotently saves an existing event |
 | DELETE | `/api/bookmarks/:id` | Idempotently removes the caller's save |
 
-**Event permissions.** The officer who publishes an event owns it. The owner can
+**Organizations.** Every event belongs to an organization, and its `org` field in API
+responses comes from that organization. An account can belong to several organizations,
+as a `member` or a `leader`. Any registered account can be added, officer or student, and
+an organization always keeps at least one leader. Only a leader of an organization can
+publish events for it, and publishing still needs the officer role. Handles are letters,
+numbers and underscores (3 to 30), unique ignoring case, and responses show them with a
+leading `@`.
+
+When publishing, `organizationId` is optional. If it is sent, the caller must lead that
+organization (otherwise 403). If it is left out, the event goes to the one organization the
+caller leads. An officer who leads none gets a default one called "<name> Org", created on
+their first event. An officer who leads several must send `organizationId` (otherwise 400).
+The web forms do not have an organization picker yet, so until they do, they publish to the
+default organization. Verification and follower counts are not stored yet and are always
+`false` and `0`.
+
+**Event permissions.** The officer who publishes an event owns it, and so does every
+leader of the event's organization. The owner can
 edit it, delete it, and invite other people to edit it. Permissions are per event,
 not by account role: an invited editor can be any registered account, officer or
 student. An editor can edit the event and see its editors, but cannot delete it,
 invite anyone, or remove other editors (they can remove themself). Everyone else
 gets 403. Only officers can publish new events.
 Editing uses the same validation as publishing, so an event must still be in the
-future to be saved. Edits never change the owner, organization, counters or creation
+future to be saved. Edits never change the creator, organization, counters or creation
 time. Inviting gives an existing account access immediately and sends no email. The
 person must have signed up first: an email with no account returns 404, because
 access goes to an account, not to an unverified address. This also means an event's
@@ -171,6 +194,10 @@ tables to avoid colliding with the team's proposed full schema; event presentati
 fields are temporarily stored in a JSONB payload with relational IDs, creator,
 start timestamp, and saves. The migration is additive and repeatable. A later
 full-schema migration must transform those payloads explicitly.
+
+Migration `003_organizations.sql` gives every existing event's creator one organization
+(named "<name> Org") that they lead, and attaches their events to it. Those organizations
+have new ids, so follows that a browser saved under the old made-up ids do not carry over.
 
 Attendance, RSVP, check-in, reports, organization verification and other prototype
 features still use the existing data stores. This work does not complete #14's

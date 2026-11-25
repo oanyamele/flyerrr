@@ -17,6 +17,8 @@ let server: Server;
 let base: string;
 const sessionSchema = z.object({ userId: z.string(), role: z.string(), isLoggedIn: z.boolean() });
 const eventSchema = z.object({ id: z.string(), title: z.string(), saved: z.boolean() });
+const orgSchema = z.object({ id: z.string(), name: z.string(), handle: z.string(), myRole: z.string().nullable() });
+const orgEventSchema = z.object({ id: z.string(), org: z.object({ id: z.string(), name: z.string(), handle: z.string() }) });
 const eventsFrom = async (response: Response) => z.array(eventSchema).parse(await response.json());
 
 const start = async () => {
@@ -186,5 +188,83 @@ describe("PostgreSQL bookmark API", () => {
     assert.equal((await request(path, owner.cookie, "DELETE")).status, 404);
     assert.equal((await pool.query("SELECT count(*) FROM api_event_saves WHERE event_id=$1", [created.id])).rows[0].count, "0");
     assert.equal((await pool.query("SELECT count(*) FROM api_event_editors WHERE event_id=$1", [created.id])).rows[0].count, "0");
+  });
+
+  it("ties every event to an organization and lets leaders manage it", async () => {
+    const lead = await register("lead@howard.edu");
+    const second = await register("second-officer@howard.edu");
+    const student = await register("org-student@howard.edu");
+    const outsider = await register("outsider@howard.edu");
+    await pool.query("UPDATE api_users SET role='org_officer' WHERE id = ANY($1::uuid[])", [[lead.user.userId, second.user.userId, outsider.user.userId]]);
+    const publish = (cookie: string, extra: object = {}) => request("/events", cookie, "POST", { ...eventBody(), ...extra });
+
+    // With no organization named, an officer who leads none gets a default one, then reuses it.
+    const first = orgEventSchema.parse(await (await publish(lead.cookie)).json());
+    assert.equal(first.org.name, "Test Student Org");
+    assert.match(first.org.handle, /^@teststudent_[0-9a-f]{6}$/);
+    assert.equal(orgEventSchema.parse(await (await publish(lead.cookie)).json()).org.id, first.org.id);
+    const mine = z.array(orgSchema).parse(await (await request("/organizations", lead.cookie)).json());
+    assert.deepEqual(mine.map(org => [org.id, org.myRole]), [[first.org.id, "leader"]]);
+    assert.deepEqual(z.array(orgSchema).parse(await (await request("/organizations", student.cookie)).json()), []);
+
+    // Creating organizations: officers only, valid and unique handles.
+    const body = { name: "Debate Club", handle: "debate_club" };
+    assert.equal((await request("/organizations", student.cookie, "POST", body)).status, 403);
+    assert.equal((await request("/organizations", lead.cookie, "POST", { ...body, handle: "no spaces" })).status, 400);
+    const debate = await request("/organizations", lead.cookie, "POST", body);
+    assert.equal(debate.status, 201);
+    const club = orgSchema.parse(await debate.json());
+    assert.equal(club.handle, "@debate_club");
+    assert.equal(club.myRole, "leader");
+    assert.equal((await request("/organizations", outsider.cookie, "POST", { name: "Copycat", handle: "@DEBATE_CLUB" })).status, 409);
+    assert.equal(orgSchema.parse(await (await request(`/organizations/${club.id}`, outsider.cookie)).json()).myRole, null);
+    assert.equal((await request(`/organizations/${randomUUID()}`, lead.cookie)).status, 404);
+
+    // Leading two organizations means choosing one; naming one you do not lead is refused.
+    assert.equal((await publish(lead.cookie)).status, 400);
+    const chosen = orgEventSchema.parse(await (await publish(lead.cookie, { organizationId: club.id })).json());
+    assert.equal(chosen.org.handle, "@debate_club");
+    assert.equal((await publish(outsider.cookie, { organizationId: club.id })).status, 403);
+    assert.equal((await publish(outsider.cookie, { organizationId: randomUUID() })).status, 403);
+    assert.equal((await publish(lead.cookie, { organizationId: "not-a-uuid" })).status, 400);
+    assert.equal(orgEventSchema.parse(await (await request(`/events/${chosen.id}`, student.cookie)).json()).org.id, club.id);
+
+    // Members: any registered account can be added; only leaders add, remove or promote.
+    const members = `/organizations/${club.id}/members`;
+    assert.equal((await request(members, lead.cookie, "POST", { email: "nobody@howard.edu" })).status, 404);
+    assert.equal((await request(members, lead.cookie, "POST", { email: "org-student@howard.edu" })).status, 201);
+    assert.equal((await request(members, lead.cookie, "POST", { email: "second-officer@howard.edu" })).status, 201);
+    assert.equal((await request(members, lead.cookie, "POST", { email: "second-officer@howard.edu" })).status, 200);
+    assert.equal(orgSchema.parse(await (await request(`/organizations/${club.id}`, student.cookie)).json()).myRole, "member");
+    assert.equal((await request(members, student.cookie, "POST", { email: "outsider@howard.edu" })).status, 403);
+    assert.equal((await request(members, outsider.cookie, "POST", { email: "outsider@howard.edu" })).status, 404);
+    assert.equal((await request(members, outsider.cookie)).status, 403);
+    const listed = z.array(z.object({ email: z.string(), role: z.string() })).parse(await (await request(members, student.cookie)).json());
+    assert.deepEqual(listed.map(m => [m.email, m.role]).sort(), [["lead@howard.edu", "leader"], ["org-student@howard.edu", "member"], ["second-officer@howard.edu", "member"]]);
+
+    // A plain member cannot publish or manage events for the organization.
+    assert.equal((await publish(second.cookie, { organizationId: club.id })).status, 403);
+    assert.equal((await request(`/events/${chosen.id}`, second.cookie, "PUT", eventBody())).status, 403);
+    assert.equal((await request(`/events/${chosen.id}/editors`, second.cookie, "POST", { email: "outsider@howard.edu" })).status, 403);
+
+    // A leader of the organization manages its events even though someone else created them.
+    assert.equal((await request(members, lead.cookie, "POST", { email: "second-officer@howard.edu", role: "leader" })).status, 200);
+    assert.equal((await publish(second.cookie, { organizationId: club.id })).status, 201);
+    assert.equal((await request(`/events/${chosen.id}`, second.cookie, "PUT", { ...eventBody(), title: "Edited by a leader" })).status, 200);
+    assert.equal((await request(`/events/${chosen.id}/editors`, second.cookie, "POST", { email: "outsider@howard.edu" })).status, 201);
+    assert.equal((await request(`/events/${chosen.id}`, student.cookie, "PUT", eventBody())).status, 403);
+    assert.equal((await request(`/events/${chosen.id}`, second.cookie, "DELETE")).status, 204);
+
+    // Removing members: leaders remove anyone, members only themselves, and one leader must remain.
+    assert.equal((await request(`${members}/${lead.user.userId}`, student.cookie, "DELETE")).status, 403);
+    assert.equal((await request(`${members}/${student.user.userId}`, student.cookie, "DELETE")).status, 204);
+    assert.equal((await request(`/organizations/${club.id}`, student.cookie)).status, 200);
+    assert.equal((await request(members, student.cookie)).status, 403);
+    assert.equal((await request(members, lead.cookie, "POST", { email: "second-officer@howard.edu", role: "member" })).status, 200);
+    assert.equal((await request(members, lead.cookie, "POST", { email: "lead@howard.edu", role: "member" })).status, 409);
+    assert.equal((await request(`${members}/${lead.user.userId}`, lead.cookie, "DELETE")).status, 409);
+    assert.equal((await request(members, lead.cookie, "POST", { email: "second-officer@howard.edu", role: "leader" })).status, 200);
+    assert.equal((await request(`${members}/${lead.user.userId}`, lead.cookie, "DELETE")).status, 204);
+    assert.equal((await request(members, lead.cookie)).status, 403);
   });
 });
