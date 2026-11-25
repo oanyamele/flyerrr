@@ -205,7 +205,7 @@ describe("PostgreSQL bookmark API", () => {
     assert.equal(orgEventSchema.parse(await (await publish(lead.cookie)).json()).org.id, first.org.id);
     const mine = z.array(orgSchema).parse(await (await request("/organizations", lead.cookie)).json());
     assert.deepEqual(mine.map(org => [org.id, org.myRole]), [[first.org.id, "leader"]]);
-    assert.equal((await request("/organizations", student.cookie, "GET").then(r => r.json())).length, 0);
+    assert.deepEqual(z.array(orgSchema).parse(await (await request("/organizations", student.cookie)).json()), []);
 
     // Creating organizations: officers only, valid and unique handles.
     const body = { name: "Debate Club", handle: "debate_club" };
