@@ -142,6 +142,9 @@ environment variables through the host. `PORT` defaults to 3001.
 | POST | `/api/events/:id/check-in-tokens` | Any signed-in account gets a signed, single-use check-in code for themself; it expires after 2 minutes |
 | POST | `/api/events/:id/check-ins` | Redeems a code and records attendance; event owner, invited editor or organization leader only |
 | GET | `/api/events/:id/attendance` | Lists who checked in; same people as above |
+| GET | `/api/organization-verifications` | The verification queue: every organization with its status, pending first; officers only |
+| PUT | `/api/organizations/:id/verification` | Approves or rejects an organization; any officer except a leader of that organization. Approval sets `verified: true` on its profile |
+| GET | `/api/organizations/:id/verification-decisions` | The audit log for one organization (who decided, what it replaced, when); officers only |
 | GET | `/api/bookmarks` | Lists only the caller's saved events |
 | PUT | `/api/bookmarks/:id` | Idempotently saves an existing event |
 | DELETE | `/api/bookmarks/:id` | Idempotently removes the caller's save |
@@ -234,7 +237,13 @@ Migration `003_organizations.sql` gives every existing event's creator one organ
 (named "<name> Org") that they lead, and attaches their events to it. Those organizations
 have new ids, so follows that a browser saved under the old made-up ids do not carry over.
 
-Attendance, RSVP, check-in, reports, organization verification and other prototype
+Organizations start `pending`. Migration `006_org_verification.sql` adds the status and an
+audit table (`api_org_verification_decisions`) that keeps the organization name and officer
+email as they were, and survives deleting either. Decisions can be reversed; the latest one
+decides `verified`. The queue shows who created the organization and their email; it no
+longer shows a proof type, because the server does not collect one yet.
+
+RSVP, reports, points and other prototype
 features still use the existing data stores. This work does not complete #14's
 staging deployment or #16's app-wide auth migration. No hosted environment was
 created or verified. Password recovery, university-email verification, broader
