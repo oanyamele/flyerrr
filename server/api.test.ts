@@ -409,4 +409,58 @@ describe("PostgreSQL bookmark API", () => {
     assert.equal((await pool.query("SELECT count(*) FROM api_attendance WHERE event_id=$1", [event.id])).rows[0].count, "0");
     assert.equal((await pool.query("SELECT count(*) FROM api_check_in_nonces WHERE event_id=$1", [event.id])).rows[0].count, "0");
   });
+
+  it("lets officers who do not lead an organization approve or reject it, and records each decision", async () => {
+    const lead = await register("verify-lead@howard.edu");
+    const reviewer = await register("verify-reviewer@howard.edu");
+    const student = await register("verify-student@bison.howard.edu");
+    await pool.query("UPDATE api_users SET role='org_officer' WHERE id = ANY($1)", [[lead.user.userId, reviewer.user.userId]]);
+    const created = orgSchema.parse(await (await request("/organizations", lead.cookie, "POST", { name: "Verify Me Club", handle: "verify_me" })).json());
+    const queueItem = z.object({ id: z.string(), status: z.string(), canDecide: z.boolean(), decidedBy: z.string().nullable(), submittedBy: z.string(), orgName: z.string() });
+    const decide = (cookie: string, body: unknown) => request(`/organizations/${created.id}/verification`, cookie, "PUT", body);
+    const verifiedFlag = async () => z.object({ verified: z.boolean() }).parse((await (await request(`/organizations/${created.id}`, lead.cookie)).json()) as object).verified;
+    const readQueue = async (cookie: string) => z.array(queueItem).parse(await (await request("/organization-verifications", cookie)).json());
+
+    // Students cannot read the queue or decide, and signed-out callers are turned away.
+    assert.equal((await request("/organization-verifications", student.cookie)).status, 403);
+    assert.equal((await decide(student.cookie, { decision: "approved" })).status, 403);
+    assert.equal((await request("/organization-verifications")).status, 401);
+    assert.equal(await verifiedFlag(), false);
+
+    // The organization starts pending. Its own leader sees it but cannot decide, and an officer from elsewhere can.
+    assert.deepEqual((await readQueue(lead.cookie)).filter(item => item.id === created.id).map(item => [item.status, item.canDecide]), [["pending", false]]);
+    assert.deepEqual((await readQueue(reviewer.cookie)).filter(item => item.id === created.id).map(item => [item.status, item.canDecide]), [["pending", true]]);
+    assert.equal((await decide(lead.cookie, { decision: "approved" })).status, 403);
+    assert.equal((await decide(reviewer.cookie, { decision: "maybe" })).status, 400);
+    assert.equal((await decide(reviewer.cookie, {})).status, 400);
+    assert.equal((await request(`/organizations/${randomUUID()}/verification`, reviewer.cookie, "PUT", { decision: "approved" })).status, 404);
+    assert.equal(await verifiedFlag(), false);
+
+    const approved = queueItem.parse(await (await decide(reviewer.cookie, { decision: "approved", note: "Charter on file." })).json());
+    assert.deepEqual([approved.status, approved.decidedBy], ["approved", "Test Student"]);
+    assert.equal(await verifiedFlag(), true);
+    assert.equal((await decide(reviewer.cookie, { decision: "approved" })).status, 409);
+
+    // A decision can be reversed, and verified follows the latest one.
+    assert.equal((await decide(reviewer.cookie, { decision: "rejected", note: "Letter expired." })).status, 200);
+    assert.equal(await verifiedFlag(), false);
+
+    // Every change is in the log with who made it, what it replaced, and when.
+    const log = z.array(z.object({ decision: z.string(), previousStatus: z.string(), actorEmail: z.string(), note: z.string().nullable(), decidedAt: z.string() }))
+      .parse(await (await request(`/organizations/${created.id}/verification-decisions`, reviewer.cookie)).json());
+    assert.deepEqual(log.map(entry => [entry.previousStatus, entry.decision, entry.actorEmail, entry.note]), [
+      ["pending", "approved", "verify-reviewer@howard.edu", "Charter on file."],
+      ["approved", "rejected", "verify-reviewer@howard.edu", "Letter expired."],
+    ]);
+    assert.ok(log.every(entry => !Number.isNaN(Date.parse(entry.decidedAt))));
+    assert.equal((await request(`/organizations/${created.id}/verification-decisions`, student.cookie)).status, 403);
+
+    // A leader of one organization can review another, and the history outlives a deleted organization.
+    const second = orgSchema.parse(await (await request("/organizations", reviewer.cookie, "POST", { name: "Second Club", handle: "second_club" })).json());
+    assert.equal((await request(`/organizations/${second.id}/verification`, lead.cookie, "PUT", { decision: "approved" })).status, 200);
+    assert.equal((await request(`/organizations/${second.id}/verification`, reviewer.cookie, "PUT", { decision: "approved" })).status, 403);
+    assert.equal((await request(`/organizations/${second.id}`, reviewer.cookie, "DELETE")).status, 204);
+    const kept = (await pool.query("SELECT organization_name, organization_id FROM api_org_verification_decisions WHERE organization_name = 'Second Club'")).rows;
+    assert.deepEqual(kept, [{ organization_name: "Second Club", organization_id: null }]);
+  });
 });

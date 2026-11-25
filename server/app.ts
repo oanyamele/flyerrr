@@ -25,11 +25,12 @@ const handleSchema = z.string().trim().transform(value => value.replace(/^@/, ""
 const organizationSchema = z.object({ name: z.string().trim().min(2).max(80), handle: handleSchema });
 const organizationUpdateSchema = z.object({ name: organizationSchema.shape.name.optional(), handle: handleSchema.optional() })
   .refine(value => value.name !== undefined || value.handle !== undefined, { message: "Send a name, a handle, or both." });
+const verificationDecisionSchema = z.object({ decision: z.enum(["approved", "rejected"]), note: z.string().trim().max(500).optional() });
 const slug = (name: string) => name.toLowerCase().replace(/[^a-z0-9]/g, "").slice(0, 20) || "org";
-// The organization as the client's OrgProfile expects it. Verification and follower counts
-// are not stored yet, so they are fixed at their defaults.
+// The organization as the client's OrgProfile expects it. "Verified" is an approved
+// verification; follower counts are not stored yet, so they are fixed at their default.
 const orgJson = (alias: string) => `jsonb_build_object('id', ${alias}.id, 'name', ${alias}.name, 'handle', '@' || ${alias}.handle,
-  'avatar', upper(left(${alias}.name, 2)), 'verified', false, 'followerCount', 0)`;
+  'avatar', upper(left(${alias}.name, 2)), 'verified', ${alias}.verification_status = 'approved', 'followerCount', 0)`;
 // The editable fields of an event. Ownership, org, counters and createdAt are never taken from a request.
 const eventFields = (input: EventInput, image: string) => ({
   title: input.title, description: input.description, category: input.category,
@@ -378,6 +379,67 @@ export const createApi = async (pool: Pool, options: { origin: string; secureCoo
       throw error;
     }
     res.sendStatus(204);
+  });
+  // Verification. Any officer can review organizations, except that the leaders of an
+  // organization cannot review their own. Each decision is saved with who made it and when.
+  const requireOfficer = (res: Response) => {
+    const user: User = res.locals.user;
+    if (user.role !== "org_officer") {
+      res.status(403).json({ error: "Only an organization officer can review organizations." });
+      return null;
+    }
+    return user;
+  };
+  const verificationItems = async (userId: string, where = "", params: unknown[] = []) => (await pool.query(
+    `SELECT o.id, o.name AS "orgName", '@' || o.handle AS handle, creator.name AS "submittedBy", creator.email AS "schoolEmail",
+       o.created_at AS "submittedAt", o.verification_status AS status, o.verification_decided_at AS "decidedAt",
+       decider.name AS "decidedBy",
+       NOT EXISTS (SELECT 1 FROM api_organization_members m WHERE m.organization_id = o.id AND m.user_id = $1 AND m.role = 'leader') AS "canDecide"
+     FROM api_organizations o
+     JOIN api_users creator ON creator.id = o.created_by
+     LEFT JOIN api_users decider ON decider.id = o.verification_decided_by
+     ${where}
+     ORDER BY (o.verification_status = 'pending') DESC, o.created_at DESC, o.id`, [userId, ...params],
+  )).rows;
+  app.get("/api/organization-verifications", async (_req, res) => {
+    const user = requireOfficer(res);
+    if (user) res.json(await verificationItems(user.id));
+  });
+  app.put("/api/organizations/:id/verification", async (req, res) => {
+    const user = requireOfficer(res);
+    if (!user) return;
+    const id = idSchema.parse(req.params.id);
+    const { decision, note } = verificationDecisionSchema.parse(req.body ?? {});
+    try {
+      await transaction(async db => {
+        // Lock the row so two officers deciding at once cannot both record a change from the same status.
+        const org = (await db.query<{ name: string; verification_status: string }>(
+          "SELECT name, verification_status FROM api_organizations WHERE id = $1 FOR UPDATE", [id])).rows[0];
+        if (!org) throw new Rejected(404, { error: "Organization not found." });
+        const leads = await db.query("SELECT 1 FROM api_organization_members WHERE organization_id = $1 AND user_id = $2 AND role = 'leader'", [id, user.id]);
+        if (leads.rowCount) throw new Rejected(403, { error: "Leaders cannot review their own organization." });
+        if (org.verification_status === decision) throw new Rejected(409, { error: `This organization is already ${decision}.` });
+        await db.query(
+          "UPDATE api_organizations SET verification_status = $2, verification_decided_at = now(), verification_decided_by = $3 WHERE id = $1",
+          [id, decision, user.id]);
+        await db.query(
+          `INSERT INTO api_org_verification_decisions(id, organization_id, organization_name, actor_id, actor_email, decision, previous_status, note)
+           VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
+          [randomUUID(), id, org.name, user.id, user.email, decision, org.verification_status, note || null]);
+      });
+    } catch (error) {
+      if (error instanceof Rejected) return void res.status(error.status).json(error.body);
+      throw error;
+    }
+    res.json((await verificationItems(user.id, "WHERE o.id = $2", [id]))[0]);
+  });
+  app.get("/api/organizations/:id/verification-decisions", async (req, res) => {
+    if (!requireOfficer(res)) return;
+    const id = idSchema.parse(req.params.id);
+    const result = await pool.query(
+      `SELECT decision, previous_status AS "previousStatus", actor_email AS "actorEmail", note, decided_at AS "decidedAt"
+       FROM api_org_verification_decisions WHERE organization_id = $1 ORDER BY decided_at, id`, [id]);
+    res.json(result.rows);
   });
   app.get("/api/organizations/:id/members", async (req, res) => {
     const user: User = res.locals.user;
