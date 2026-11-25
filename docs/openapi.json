@@ -1711,7 +1711,7 @@
             "type": "string",
             "format": "email",
             "maxLength": 254,
-            "description": "Must end in @howard.edu."
+            "description": "Must be an @howard.edu or @bison.howard.edu address."
           },
           "password": {
             "type": "string",

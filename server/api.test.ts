@@ -74,6 +74,15 @@ describe("PostgreSQL bookmark API", () => {
     assert.equal((await request("/events", 'flyerrr_auth={"isLoggedIn":true,"role":"org_officer"}')).status, 401);
   });
 
+  it("accepts student addresses on bison.howard.edu and rejects look-alike domains", async () => {
+    const student = await register("bison-student@bison.howard.edu");
+    assert.equal(student.user.role, "student");
+    const login = await request("/auth/login", "", "POST", { email: "Bison-Student@BISON.HOWARD.EDU", password: "GoodPassword123" });
+    assert.equal(login.status, 200);
+    const lookalike = await request("/auth/register", "", "POST", { email: "x@howard.edu.example.com", name: "Test Student", password: "GoodPassword123" });
+    assert.equal(lookalike.status, 400);
+  });
+
   it("publishes to shared data, persists saves across restart, and isolates accounts", async () => {
     const alice = await register("alice@howard.edu");
     const bob = await register("bob@howard.edu");

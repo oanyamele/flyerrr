@@ -29,7 +29,21 @@ describe("authFormSchema", () => {
     });
 
     expect(result.success).toBe(false);
-    expect(result.error?.issues[0]?.message).toBe("Use your @howard.edu email address.");
+    expect(result.error?.issues[0]?.message).toBe("Use your @howard.edu or @bison.howard.edu email address.");
+  });
+
+  it("accepts howard.edu and bison.howard.edu addresses in any letter case", () => {
+    for (const email of ["officer@howard.edu", "student@bison.howard.edu", "Student@BISON.Howard.EDU"]) {
+      const result = authFormSchema("signin").safeParse({ name: "", email, password: "password123" });
+      expect(result.success, email).toBe(true);
+    }
+  });
+
+  it("rejects look-alike domains", () => {
+    for (const email of ["a@evilhoward.edu", "a@howard.edu.example.com", "a@notbison.howard.edu", "a@mail.howard.edu", "a@bison.howard.edu.evil.io", "a@gmail.com"]) {
+      const result = authFormSchema("signin").safeParse({ name: "", email, password: "password123" });
+      expect(result.success, email).toBe(false);
+    }
   });
 
   it("enforces password strength when an account is created", () => {
