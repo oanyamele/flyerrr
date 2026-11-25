@@ -29,7 +29,8 @@ bun run dev
 ```
 
 Open `http://localhost:8080`. Vite proxies `/api` to the API on port 3001.
-The API applies its additive migration on startup. PostgreSQL uses the
+The API applies any pending migrations on startup (see
+[Database migrations](#database-migrations)). PostgreSQL uses the
 `flyerrr_data` Docker volume, so stopping/restarting the API or database preserves
 bookmarks. `docker compose down` keeps the volume; removing that volume deletes
 the local shared data.
@@ -40,6 +41,31 @@ If `VITE_DATA_BACKEND` is omitted, the application uses the existing offline
 adapter. Offline bookmarks use `flyerrr_bookmarks_v1`, keyed by user ID, and are
 never presented as shared server data. Legacy component-only saves have no
 durable state to migrate. Demo accounts and passwords are not copied to the API.
+
+## Database migrations
+
+Schema changes live in `server/migrations/` as numbered SQL files
+(`001_bookmarks.sql`, `002_....sql`, and so on). The runner in `server/database.ts`
+applies them in name order and records each one in a `schema_migrations` table with
+a SHA-256 checksum. Running it again does nothing.
+
+```sh
+DATABASE_URL=postgres://flyerrr:flyerrr_dev@127.0.0.1:55432/flyerrr bun run api:migrate
+```
+
+The API also runs pending migrations when it starts. Concurrent starts are
+serialized with a PostgreSQL advisory lock, so two instances booting together are safe.
+
+Rules for migration files:
+
+- Never edit a migration that has been applied anywhere. The runner stops with an
+  error if an applied file's checksum changed. Add a new numbered file instead.
+- Each file manages its own transaction (`BEGIN` ... `COMMIT`) and should be safe to
+  re-run, using `IF NOT EXISTS` and similar guards.
+- Name files `NNN_lowercase_description.sql`. Other names are ignored.
+
+CI applies the migrations to a fresh PostgreSQL service twice before the API tests,
+and `server/migrate.test.ts` covers recording, repeat runs, and the checksum guard.
 
 ## Accounts and event publishing
 
