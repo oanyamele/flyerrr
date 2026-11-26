@@ -3,6 +3,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
 import { ArrowLeft, BadgeCheck, Building2, Clock3, FileCheck2, ShieldAlert } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { EmptyState } from "@/components/states/DataStates";
 import { ApiError, useHttpBackend } from "@/services/httpApi";
 import { decideVerification, fetchVerificationQueue, verificationQueueKey, type VerificationStatus } from "@/services/orgVerificationApi";
 
@@ -91,7 +92,7 @@ const QueueView = ({ items, loading, error, onRetry, pendingId, onDecide }: Queu
           </div>
         )}
         {!loading && !error && items.length === 0 && (
-          <p className="rounded-2xl border border-border bg-card p-4 text-sm text-muted-foreground">No organizations to review.</p>
+          <EmptyState icon={FileCheck2} title="No verification requests" description="New organization requests will appear here for review." />
         )}
         {items.map((item) => (
           <article key={item.id} className="rounded-2xl border border-border bg-card p-4 shadow-sm">
@@ -167,8 +168,8 @@ const QueueView = ({ items, loading, error, onRetry, pendingId, onDecide }: Queu
   );
 };
 
-const LocalQueue = () => {
-  const [queue, setQueue] = useState(initialQueue);
+const LocalQueue = ({ initialRequests = initialQueue }: { initialRequests?: QueueItem[] }) => {
+  const [queue, setQueue] = useState(initialRequests);
   return (
     <QueueView
       items={queue}
@@ -208,6 +209,8 @@ const ServerQueue = () => {
   );
 };
 
-const OrganizationVerificationQueue = () => (useHttpBackend ? <ServerQueue /> : <LocalQueue />);
+// initialRequests lets tests show the offline queue's empty state; the server queue ignores it.
+const OrganizationVerificationQueue = ({ initialRequests }: { initialRequests?: QueueItem[] }) =>
+  useHttpBackend ? <ServerQueue /> : <LocalQueue initialRequests={initialRequests} />;
 
 export default OrganizationVerificationQueue;

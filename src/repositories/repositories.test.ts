@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it } from "vitest";
 import { repositoryMode } from "@/repositories/config";
 import type { AttendanceRepository, EventRepository, UserRepository } from "@/repositories/contracts";
 import { HttpRepository } from "@/repositories/httpRepository";
-import type { EventRecord } from "@/data/appDatabase";
+import { recordCheckIn, type EventRecord } from "@/data/appDatabase";
 import { LocalStorageRepository } from "@/repositories/localStorageRepository";
 import { openHttpRepositories } from "@/repositories/openRepositories";
 
@@ -101,7 +101,10 @@ describe("LocalStorageRepository", () => {
     expect(localStorage.getItem("flyer_rsvp_v1")).toContain(eventId);
     expect(attendance.reminderMapForUser("user-student-1")[eventId]).toBe(true);
 
-    expect(attendance.listAttendance().length).toBeGreaterThan(0);
+    // New databases start with no attendance (no made-up seed rows), so record a real check-in.
+    expect(attendance.listAttendance()).toEqual([]);
+    expect(recordCheckIn({ eventId, userId: "user-student-1" }).ok).toBe(true);
+    expect(attendance.listAttendance()).toHaveLength(1);
     expect(attendance.summarizeAttendance()[0]?.eventTitle).toBeTruthy();
     expect(attendance.exportAttendanceCsv()).toContain("record_id");
   });
