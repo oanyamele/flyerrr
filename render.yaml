@@ -1,0 +1,25 @@
+# Render Blueprint for the staging environment. See docs/deploy-staging.md.
+# The database is a Supabase project, so only the web service lives here.
+services:
+  - type: web
+    name: flyerrr-staging
+    runtime: docker
+    plan: free
+    # Fails the deploy, and keeps the previous version running, if the API cannot reach the database.
+    healthCheckPath: /api/health
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: API_HOST
+        value: 0.0.0.0
+      # Secrets and per-environment values are entered in the Render dashboard, never committed.
+      - key: DATABASE_URL
+        sync: false
+      - key: DATABASE_SSL_CA
+        sync: false
+      # Signs check-in codes. At least 32 random characters, such as the output of: openssl rand -hex 32
+      - key: CHECK_IN_SECRET
+        sync: false
+      # The public https address of this service, for example https://flyerrr-staging.onrender.com
+      - key: APP_ORIGIN
+        sync: false
