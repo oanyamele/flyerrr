@@ -33,25 +33,27 @@ describe("accounts and events", () => {
     vi.useRealTimers();
   });
 
-  it("creates an account, signs that person in, and rejects a bad password", () => {
+  it("creates an account, signs that person in, and rejects a bad password", async () => {
     vi.useFakeTimers();
     vi.setSystemTime(new Date("2026-03-01T00:00:00.000Z"));
-    const created = createUser({
+    const created = await createUser({
       email: " New.Student@howard.edu ",
       password: "secret",
       name: "  New Student  ",
-      role: "student",
     });
     expect(created.ok).toBe(true);
     if (!created.ok) return;
     expect(created.user.email).toBe("new.student@howard.edu");
     expect(created.user.name).toBe("New Student");
+    // Sign-up always creates a student, and only a hash of the password is stored.
+    expect(created.user.role).toBe("student");
+    expect(created.user.password).toBeUndefined();
+    expect(created.user.passwordHash).not.toBe("secret");
 
     vi.setSystemTime(new Date("2026-03-02T12:00:00.000Z"));
-    const signedIn = authenticateUser({
+    const signedIn = await authenticateUser({
       email: "new.student@howard.edu",
       password: "secret",
-      role: "student",
     });
     expect(signedIn.ok).toBe(true);
     if (signedIn.ok) {
@@ -60,11 +62,10 @@ describe("accounts and events", () => {
       expect(signedIn.user.lastLoginAt).toBe("2026-03-02T12:00:00.000Z");
     }
 
-    expect(authenticateUser({
+    expect(await authenticateUser({
       email: "new.student@howard.edu",
       password: "wrong",
-      role: "student",
-    })).toEqual({ ok: false, error: "Invalid email, password, or role." });
+    })).toEqual({ ok: false, error: "Invalid email or password." });
   });
 
   it("gives a student event the default org and an officer event their own org", () => {

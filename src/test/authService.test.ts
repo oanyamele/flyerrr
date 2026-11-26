@@ -34,7 +34,8 @@ describe("authService", () => {
     const user: AppUser = {
       id: "user-student-1",
       email: "student@howard.edu",
-      password: "password123",
+      passwordHash: "stored-hash-value",
+      passwordSalt: "stored-salt-value",
       name: "Campus Student",
       role: "student",
       createdAt: "2026-01-01T00:00:00.000Z",
@@ -49,7 +50,8 @@ describe("authService", () => {
       email: "student@howard.edu",
       userId: "user-student-1",
     });
-    expect(JSON.stringify(session)).not.toContain("password123");
+    expect(JSON.stringify(session)).not.toContain("stored-hash-value");
+    expect(JSON.stringify(session)).not.toContain("stored-salt-value");
   });
 
   it("treats corrupt JSON as logged out instead of throwing", () => {

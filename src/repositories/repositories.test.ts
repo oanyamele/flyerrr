@@ -29,7 +29,7 @@ describe("LocalStorageRepository", () => {
     localStorage.clear();
   });
 
-  it("signs in the seeded student and rejects a mismatched role", async () => {
+  it("signs in the seeded student and ignores a requested role", async () => {
     const signedIn = await users.authenticateUser({
       email: "student@howard.edu",
       password: "password123",
@@ -38,12 +38,14 @@ describe("LocalStorageRepository", () => {
     expect(signedIn.ok).toBe(true);
     if (signedIn.ok) expect(signedIn.user.name).toBe("Campus Student");
 
-    const wrongRole = await users.authenticateUser({
+    // The role comes from the stored account (F1.5), so asking for officer still signs in a student.
+    const askedForOfficer = await users.authenticateUser({
       email: "student@howard.edu",
       password: "password123",
       role: "org_officer",
     });
-    expect(wrongRole).toEqual({ ok: false, error: "Invalid email, password, or role." });
+    expect(askedForOfficer.ok).toBe(true);
+    if (askedForOfficer.ok) expect(askedForOfficer.user.role).toBe("student");
   });
 
   it("persists a new account and refuses a duplicate email", async () => {

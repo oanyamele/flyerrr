@@ -2,7 +2,6 @@ import { expect, test, type Page } from "@playwright/test";
 
 const login = async (page: Page, email: string, signup = false) => {
   await page.goto("/login");
-  await page.getByRole("button", { name: "Student Discover" }).click();
   if (signup) {
     await page.getByRole("button", { name: "Sign Up", exact: true }).click();
     await page.getByRole("textbox", { name: "Full Name" }).fill("Test Student");

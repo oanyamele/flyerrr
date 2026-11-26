@@ -9,7 +9,8 @@ import { AUTH_STORAGE_KEY } from "@/services/authService";
 const student: AppUser = {
   id: "user-student-1",
   email: "student@howard.edu",
-  password: "password123",
+  passwordHash: "not-a-real-hash",
+  passwordSalt: "not-a-real-salt",
   name: "Campus Student",
   role: "student",
   createdAt: "2026-01-01T00:00:00.000Z",
@@ -18,13 +19,10 @@ const student: AppUser = {
 };
 
 const Probe = () => {
-  const { auth, login, loginWithUser, logout } = useAuth();
+  const { auth, loginWithUser, logout } = useAuth();
   return (
     <div>
       <p>{auth.isLoggedIn ? auth.userName : "signed out"}</p>
-      <button type="button" onClick={() => login("org_officer", "Campus Officer", { email: "officer@howard.edu", userId: "user-admin-1" })}>
-        Sign in
-      </button>
       <button type="button" onClick={() => loginWithUser(student)}>Sign in as student</button>
       <button type="button" onClick={() => void logout()}>Sign out</button>
     </div>
@@ -44,17 +42,15 @@ describe("auth flows", () => {
     localStorage.clear();
   });
 
-  it("signs in from a name, signs in from an account, and signs out", () => {
+  // login(role, name) was removed in F1.5 because it signed in as any role without a password.
+  it("signs in from an account and signs out", () => {
     renderAuth();
     expect(screen.getByText("signed out")).toBeInTheDocument();
 
-    fireEvent.click(screen.getByRole("button", { name: "Sign in" }));
-    expect(screen.getByText("Campus Officer")).toBeInTheDocument();
-    expect(localStorage.getItem(AUTH_STORAGE_KEY)).toContain("officer@howard.edu");
-
     fireEvent.click(screen.getByRole("button", { name: "Sign in as student" }));
     expect(screen.getByText("Campus Student")).toBeInTheDocument();
-    expect(localStorage.getItem(AUTH_STORAGE_KEY)).not.toContain("password123");
+    expect(localStorage.getItem(AUTH_STORAGE_KEY)).toContain("student@howard.edu");
+    expect(localStorage.getItem(AUTH_STORAGE_KEY)).not.toContain("not-a-real-hash");
 
     fireEvent.click(screen.getByRole("button", { name: "Sign out" }));
     expect(screen.getByText("signed out")).toBeInTheDocument();

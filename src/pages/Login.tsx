@@ -1,11 +1,11 @@
 import { useState } from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
-import { useAuth, UserRole } from "@/contexts/AuthContext";
+import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Form, FormControl, FormField, FormItem, FormMessage } from "@/components/ui/form";
-import { User, Building2, ArrowRight, Send } from "lucide-react";
+import { Send } from "lucide-react";
 import { motion } from "framer-motion";
 import { useNavigate } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
@@ -18,8 +18,6 @@ const Login = () => {
   const { loginWithUser, loginWithSession } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
-  const [step, setStep] = useState<"role" | "form">("role");
-  const [role, setRole] = useState<UserRole>("student");
   const [authMode, setAuthMode] = useState<"signin" | "signup">("signin");
   const form = useForm<AuthFormValues>({
     resolver: zodResolver(authFormSchema(authMode)),
@@ -38,11 +36,10 @@ const Login = () => {
       return;
     }
     if (authMode === "signup") {
-      const result = createUser({
+      const result = await createUser({
         email: values.email,
         password: values.password,
         name: values.name,
-        role,
       });
       if (!result.ok) {
         toast({ title: "Sign Up failed", description: result.error, variant: "destructive" });
@@ -54,7 +51,7 @@ const Login = () => {
       return;
     }
 
-    const signIn = authenticateUser({ email: values.email, password: values.password, role });
+    const signIn = await authenticateUser({ email: values.email, password: values.password });
     if (!signIn.ok) {
       toast({ title: "Sign In failed", description: signIn.error, variant: "destructive" });
       return;
@@ -81,40 +78,7 @@ const Login = () => {
         </h1>
         <p className="text-sm text-muted-foreground text-center mb-10">Discover campus events. Show up. Get rewarded.</p>
 
-        {step === "role" ? (
-          <div className="space-y-4">
-            <p className="text-sm font-semibold text-foreground text-center mb-4">How will you use flyer?</p>
-
-            <button
-              onClick={() => { setRole("student"); setStep("form"); }}
-              className="w-full flex items-center gap-4 p-4 rounded-2xl bg-card border border-border hover:border-primary transition-colors text-left tap-highlight-none"
-            >
-              <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center">
-                <User className="w-6 h-6 text-primary" />
-              </div>
-              <div className="flex-1">
-                <p className="font-bold text-foreground">Student</p>
-                <p className="text-xs text-muted-foreground">Discover and attend events on campus</p>
-              </div>
-              <ArrowRight className="w-5 h-5 text-muted-foreground" />
-            </button>
-
-            <button
-              onClick={() => { setRole("org_officer"); setStep("form"); }}
-              className="w-full flex items-center gap-4 p-4 rounded-2xl bg-card border border-border hover:border-accent transition-colors text-left tap-highlight-none"
-            >
-              <div className="w-12 h-12 rounded-xl bg-accent/10 flex items-center justify-center">
-                <Building2 className="w-6 h-6 text-accent" />
-              </div>
-              <div className="flex-1">
-                <p className="font-bold text-foreground">Organization Officer</p>
-                <p className="text-xs text-muted-foreground">Create and manage events for your org</p>
-              </div>
-              <ArrowRight className="w-5 h-5 text-muted-foreground" />
-            </button>
-          </div>
-        ) : (
-          <Form {...form}>
+        <Form {...form}>
             <motion.form
               initial={{ opacity: 0, x: 20 }}
               animate={{ opacity: 1, x: 0 }}
@@ -122,22 +86,8 @@ const Login = () => {
               className="space-y-4"
               noValidate
             >
-              <button
-                type="button"
-                onClick={() => setStep("role")}
-                className="text-sm text-muted-foreground hover:text-foreground mb-2"
-              >
-                &larr; Back
-              </button>
-
               <p className="text-sm font-semibold text-foreground">
-                {role === "student"
-                  ? authMode === "signin"
-                    ? "Student Sign In"
-                    : "Student Sign Up"
-                  : authMode === "signin"
-                  ? "Organization Officer Sign In"
-                  : "Organization Officer Sign Up"}
+                {authMode === "signin" ? "Sign In" : "Sign Up"}
               </p>
 
               {authMode === "signup" && (
@@ -195,7 +145,7 @@ const Login = () => {
                 )}
               />
 
-              {useHttpBackend && authMode === "signup" && <p className="text-xs text-muted-foreground">New accounts are students. Officer access is assigned by your administrator.</p>}
+              {authMode === "signup" && <p className="text-xs text-muted-foreground">New accounts are students. Officer access is assigned by your administrator.</p>}
               <Button type="submit" disabled={form.formState.isSubmitting} className="w-full h-12 rounded-xl text-base font-bold">
                 {authMode === "signin" ? "Sign In" : "Create Account"}
               </Button>
@@ -207,8 +157,7 @@ const Login = () => {
                 </button>
               </p>
             </motion.form>
-          </Form>
-        )}
+        </Form>
       </motion.div>
     </div>
   );
