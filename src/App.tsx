@@ -1,3 +1,4 @@
+import { Suspense, lazy } from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Route, Routes, Navigate } from "react-router-dom";
 import { Toaster as Sonner } from "@/components/ui/sonner";
@@ -7,24 +8,31 @@ import { AuthProvider, useAuth } from "@/contexts/AuthContext";
 import { ThemeProvider } from "@/contexts/ThemeContext";
 import { FollowProvider } from "@/contexts/FollowContext";
 import { RepositoryProvider } from "@/repositories/RepositoryProvider";
-import Index from "./pages/Index";
-import EventDetail from "./pages/EventDetail";
-import Explore from "./pages/Explore";
-import TapIn from "./pages/TapIn";
-import Saved from "./pages/Saved";
-import Profile from "./pages/Profile";
-import Login from "./pages/Login";
-import CreateEvent from "./pages/CreateEvent";
-import AttendanceHistory from "./pages/AttendanceHistory";
-import RewardsPerks from "./pages/RewardsPerks";
-import ResumeBuilder from "./pages/ResumeBuilder";
-import NotificationSettings from "./pages/NotificationSettings";
-import EventReminders from "./pages/EventReminders";
-import OrganizationVerificationQueue from "./pages/OrganizationVerificationQueue";
-import AttendanceReports from "./pages/AttendanceReports";
-import NotFound from "./pages/NotFound";
+
+const Index = lazy(() => import("./pages/Index"));
+const EventDetail = lazy(() => import("./pages/EventDetail"));
+const Explore = lazy(() => import("./pages/Explore"));
+const TapIn = lazy(() => import("./pages/TapIn"));
+const Saved = lazy(() => import("./pages/Saved"));
+const Profile = lazy(() => import("./pages/Profile"));
+const Login = lazy(() => import("./pages/Login"));
+const CreateEvent = lazy(() => import("./pages/CreateEvent"));
+const AttendanceHistory = lazy(() => import("./pages/AttendanceHistory"));
+const RewardsPerks = lazy(() => import("./pages/RewardsPerks"));
+const ResumeBuilder = lazy(() => import("./pages/ResumeBuilder"));
+const NotificationSettings = lazy(() => import("./pages/NotificationSettings"));
+const EventReminders = lazy(() => import("./pages/EventReminders"));
+const OrganizationVerificationQueue = lazy(() => import("./pages/OrganizationVerificationQueue"));
+const AttendanceReports = lazy(() => import("./pages/AttendanceReports"));
+const NotFound = lazy(() => import("./pages/NotFound"));
 
 const queryClient = new QueryClient();
+
+const RouteFallback = () => (
+  <div role="status" aria-live="polite" className="flex min-h-[50vh] items-center justify-center text-sm text-muted-foreground">
+    Loading…
+  </div>
+);
 
 const ProtectedRoutes = () => {
   const { auth } = useAuth();
@@ -39,6 +47,7 @@ const ProtectedRoutes = () => {
         Skip to main content
       </a>
       <main id="main-content" tabIndex={-1}>
+        <Suspense fallback={<RouteFallback />}>
         <Routes>
           <Route path="/" element={<Index />} />
           <Route path="/event/:id" element={<EventDetail />} />
@@ -56,6 +65,7 @@ const ProtectedRoutes = () => {
           <Route path="/attendance-reports" element={<AttendanceReports />} />
           <Route path="*" element={<NotFound />} />
         </Routes>
+        </Suspense>
       </main>
     </>
   );
@@ -71,10 +81,12 @@ const App = () => (
               <Toaster />
               <Sonner />
               <BrowserRouter>
-                <Routes>
-                  <Route path="/login" element={<Login />} />
-                  <Route path="/*" element={<ProtectedRoutes />} />
-                </Routes>
+                <Suspense fallback={<RouteFallback />}>
+                  <Routes>
+                    <Route path="/login" element={<Login />} />
+                    <Route path="/*" element={<ProtectedRoutes />} />
+                  </Routes>
+                </Suspense>
               </BrowserRouter>
             </TooltipProvider>
           </FollowProvider>

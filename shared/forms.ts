@@ -2,14 +2,18 @@ import { z } from "zod";
 
 export type AuthMode = "signin" | "signup";
 
+// Staff and officers use howard.edu. Students use bison.howard.edu. The whole domain is
+// matched, so lookalikes such as evilhoward.edu or howard.edu.example.com are rejected.
+const HOWARD_EMAIL_DOMAINS = ["howard.edu", "bison.howard.edu"];
+
 const howardEmailSchema = z
   .string()
   .trim()
   .max(254, "Email address is too long.")
   .min(1, "University email is required.")
   .email("Enter a valid email address.")
-  .refine((email) => email.toLowerCase().endsWith("@howard.edu"), {
-    message: "Use your @howard.edu email address.",
+  .refine((email) => HOWARD_EMAIL_DOMAINS.includes(email.toLowerCase().split("@").pop() ?? ""), {
+    message: "Use your @howard.edu or @bison.howard.edu email address.",
   });
 
 const strongPasswordSchema = z

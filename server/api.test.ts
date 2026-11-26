@@ -1,11 +1,12 @@
 import { after, before, describe, it } from "node:test";
 import assert from "node:assert/strict";
-import { randomUUID } from "node:crypto";
+import { createHash, randomUUID } from "node:crypto";
 import type { Server } from "node:http";
 import { Pool } from "pg";
 import { z } from "zod";
 import { createApi } from "./app";
 import { migrate } from "./database";
+import { signCheckInToken } from "./checkIn";
 
 const databaseUrl = process.env.TEST_DATABASE_URL;
 if (!databaseUrl) throw new Error("TEST_DATABASE_URL is required. Use a local test database.");
@@ -13,6 +14,7 @@ const schema = `bookmarks_test_${randomUUID().replaceAll("-", "")}`;
 const admin = new Pool({ connectionString: databaseUrl });
 const pool = new Pool({ connectionString: databaseUrl, options: `-c search_path=${schema}` });
 const origin = "http://localhost:8080";
+const checkInSecret = "api-test-check-in-secret-0123456789abcdef";
 let server: Server;
 let base: string;
 const sessionSchema = z.object({ userId: z.string(), role: z.string(), isLoggedIn: z.boolean() });
@@ -22,7 +24,7 @@ const orgEventSchema = z.object({ id: z.string(), org: z.object({ id: z.string()
 const eventsFrom = async (response: Response) => z.array(eventSchema).parse(await response.json());
 
 const start = async () => {
-  const app = await createApi(pool, { origin, secureCookies: false });
+  const app = await createApi(pool, { origin, secureCookies: false, checkInSecret });
   server = app.listen(0, "127.0.0.1");
   await new Promise<void>(resolve => server.once("listening", resolve));
   const address = server.address();
@@ -72,6 +74,15 @@ describe("PostgreSQL bookmark API", () => {
     assert.equal((await request("/auth/login", "", "POST", { email: "test@howard.edu", password: "weak" }, "https://other.example")).status, 403);
     assert.equal((await request("/bookmarks")).status, 401);
     assert.equal((await request("/events", 'flyerrr_auth={"isLoggedIn":true,"role":"org_officer"}')).status, 401);
+  });
+
+  it("accepts student addresses on bison.howard.edu and rejects look-alike domains", async () => {
+    const student = await register("bison-student@bison.howard.edu");
+    assert.equal(student.user.role, "student");
+    const login = await request("/auth/login", "", "POST", { email: "Bison-Student@BISON.HOWARD.EDU", password: "GoodPassword123" });
+    assert.equal(login.status, 200);
+    const lookalike = await request("/auth/register", "", "POST", { email: "x@howard.edu.example.com", name: "Test Student", password: "GoodPassword123" });
+    assert.equal(lookalike.status, 400);
   });
 
   it("publishes to shared data, persists saves across restart, and isolates accounts", async () => {
@@ -266,5 +277,190 @@ describe("PostgreSQL bookmark API", () => {
     assert.equal((await request(members, lead.cookie, "POST", { email: "second-officer@howard.edu", role: "leader" })).status, 200);
     assert.equal((await request(`${members}/${lead.user.userId}`, lead.cookie, "DELETE")).status, 204);
     assert.equal((await request(members, lead.cookie)).status, 403);
+  });
+
+  it("lets a leader rename and delete an organization", async () => {
+    const lead = await register("crud-lead@howard.edu");
+    const member = await register("crud-member@howard.edu");
+    const stranger = await register("crud-stranger@howard.edu");
+    await pool.query("UPDATE api_users SET role='org_officer' WHERE id=$1", [lead.user.userId]);
+    const created = orgSchema.parse(await (await request("/organizations", lead.cookie, "POST", { name: "Chess Club", handle: "chess_club" })).json());
+    const other = orgSchema.parse(await (await request("/organizations", lead.cookie, "POST", { name: "Go Club", handle: "go_club" })).json());
+    const path = `/organizations/${created.id}`;
+    assert.equal((await request(`/organizations/${created.id}/members`, lead.cookie, "POST", { email: "crud-member@howard.edu" })).status, 201);
+
+    // Only a leader can edit; a non-member cannot even tell that it exists.
+    assert.equal((await request(path, member.cookie, "PUT", { name: "Hijacked" })).status, 403);
+    assert.equal((await request(path, stranger.cookie, "PUT", { name: "Hijacked" })).status, 404);
+    assert.equal((await request(path, lead.cookie, "PUT", {})).status, 400);
+    assert.equal((await request(path, lead.cookie, "PUT", { name: "x" })).status, 400);
+    assert.equal((await request(path, lead.cookie, "PUT", { handle: "bad handle" })).status, 400);
+
+    const renamed = orgSchema.parse(await (await request(path, lead.cookie, "PUT", { name: "Chess and Strategy Club" })).json());
+    assert.deepEqual([renamed.id, renamed.name, renamed.handle, renamed.myRole], [created.id, "Chess and Strategy Club", "@chess_club", "leader"]);
+    const rehandled = orgSchema.parse(await (await request(path, lead.cookie, "PUT", { handle: "@Chess_HQ" })).json());
+    assert.deepEqual([rehandled.name, rehandled.handle], ["Chess and Strategy Club", "@Chess_HQ"]);
+    assert.equal((await request(path, lead.cookie, "PUT", { handle: "GO_CLUB" })).status, 409);
+    assert.equal(orgSchema.parse(await (await request(path, member.cookie)).json()).name, "Chess and Strategy Club");
+
+    // An organization with events cannot be deleted; once they are gone, only a leader can delete it.
+    const event = orgEventSchema.parse(await (await request("/events", lead.cookie, "POST", { ...eventBody(), organizationId: created.id })).json());
+    assert.equal((await request(path, lead.cookie, "DELETE")).status, 409);
+    assert.equal((await request(`/events/${event.id}`, lead.cookie, "DELETE")).status, 204);
+    assert.equal((await request(path, member.cookie, "DELETE")).status, 403);
+    assert.equal((await request(path, stranger.cookie, "DELETE")).status, 404);
+    assert.equal((await request(path, lead.cookie, "DELETE")).status, 204);
+    assert.equal((await request(path, lead.cookie)).status, 404);
+    assert.equal((await request(path, lead.cookie, "DELETE")).status, 404);
+    assert.equal((await pool.query("SELECT count(*) FROM api_organization_members WHERE organization_id=$1", [created.id])).rows[0].count, "0");
+    assert.equal((await request(`/organizations/${other.id}`, lead.cookie)).status, 200);
+  });
+
+  it("issues signed single-use check-in codes that an officer on another device can redeem", async () => {
+    const owner = await register("checkin-owner@howard.edu");
+    const editor = await register("checkin-editor@howard.edu");
+    const outsider = await register("checkin-outsider@howard.edu");
+    const maya = await register("maya@bison.howard.edu");
+    const jordan = await register("jordan@bison.howard.edu");
+    await pool.query("UPDATE api_users SET role='org_officer' WHERE id = ANY($1::uuid[])", [[owner.user.userId, editor.user.userId, outsider.user.userId]]);
+    const event = orgEventSchema.parse(await (await request("/events", owner.cookie, "POST", eventBody())).json());
+    const other = orgEventSchema.parse(await (await request("/events", owner.cookie, "POST", eventBody())).json());
+    assert.equal((await request(`/events/${event.id}/editors`, owner.cookie, "POST", { email: "checkin-editor@howard.edu" })).status, 201);
+    const tokenSchema = z.object({ token: z.string(), expiresAt: z.string() });
+    const issue = async (cookie: string, eventId = event.id) => tokenSchema.parse(await (await request(`/events/${eventId}/check-in-tokens`, cookie, "POST")).json());
+    const submit = (cookie: string, token: unknown, eventId = event.id) => request(`/events/${eventId}/check-ins`, cookie, "POST", { token });
+    const failure = z.object({ error: z.string(), code: z.string().optional(), checkedInAt: z.string().optional() });
+
+    // The server issues a code that expires about two minutes later, and only for events that exist.
+    const first = await issue(maya.cookie);
+    const lifetime = new Date(first.expiresAt).getTime() - Date.now();
+    assert.ok(lifetime > 100_000 && lifetime <= 125_000, `unexpected lifetime ${lifetime}`);
+    assert.equal((await request(`/events/${randomUUID()}/check-in-tokens`, maya.cookie, "POST")).status, 404);
+    assert.equal((await request(`/events/${event.id}/check-in-tokens`, "", "POST")).status, 401);
+    assert.equal((await pool.query("SELECT token_digest FROM api_check_in_nonces WHERE token_digest = $1", [first.token])).rowCount, 0, "the code itself must not be stored");
+
+    // Only people who manage the event can redeem a code. A student cannot check themself in.
+    assert.equal((await submit(maya.cookie, first.token)).status, 403);
+    assert.equal((await submit(outsider.cookie, first.token)).status, 403);
+    assert.equal((await request(`/events/${event.id}/attendance`, maya.cookie)).status, 403);
+
+    // A forged or altered code is rejected, and a rejected attempt does not use the code up.
+    const [body, signature] = first.token.split(".");
+    const claims = JSON.parse(Buffer.from(body, "base64url").toString("utf8")) as Record<string, unknown>;
+    const reencode = (change: object) => `${Buffer.from(JSON.stringify({ ...claims, ...change })).toString("base64url")}.${signature}`;
+    const forgeries = [
+      reencode({ u: jordan.user.userId }), reencode({ x: Math.floor(Date.now() / 1000) + 86_400 }), reencode({ e: other.id }),
+      `${body}.${signature[0] === "A" ? "B" : "A"}${signature.slice(1)}`, "not-a-code", `${body}.`,
+      signCheckInToken("some-other-secret-that-is-long-enough-123", { nonce: randomUUID(), eventId: event.id, userId: jordan.user.userId, expiresAt: Math.floor(Date.now() / 1000) + 60 }),
+    ];
+    for (const forged of forgeries) {
+      const refused = await submit(owner.cookie, forged);
+      assert.equal(refused.status, 400, forged);
+      assert.equal(failure.parse(await refused.json()).code, "invalid");
+    }
+    assert.equal((await request(`/events/${event.id}/check-ins`, owner.cookie, "POST", {})).status, 400);
+
+    // A code for one event does not work at another.
+    const wrongEvent = await submit(owner.cookie, first.token, other.id);
+    assert.equal(wrongEvent.status, 400);
+    assert.equal(failure.parse(await wrongEvent.json()).code, "wrong_event");
+
+    // Maya is on her device, the owner is on theirs: redeeming works, then the code is dead.
+    const done = z.object({ attendee: z.object({ userId: z.string(), email: z.string() }), checkedInAt: z.string() }).parse(await (await submit(owner.cookie, first.token)).json());
+    assert.equal(done.attendee.userId, maya.user.userId);
+    assert.equal(done.attendee.email, "maya@bison.howard.edu");
+    const replay = await submit(owner.cookie, first.token);
+    assert.equal(replay.status, 409);
+    assert.deepEqual([failure.parse(await replay.json()).code], ["already_used"]);
+    assert.equal((await submit(editor.cookie, first.token)).status, 409);
+    const attendance = z.array(z.object({ userId: z.string(), checkedInBy: z.string() })).parse(await (await request(`/events/${event.id}/attendance`, editor.cookie)).json());
+    assert.deepEqual(attendance.map(row => [row.userId, row.checkedInBy]), [[maya.user.userId, owner.user.userId]]);
+
+    // Maya cannot be checked in twice, and the second code stays unused.
+    const again = await issue(maya.cookie);
+    const duplicate = await submit(editor.cookie, again.token);
+    assert.equal(duplicate.status, 409);
+    const duplicateBody = failure.parse(await duplicate.json());
+    assert.equal(duplicateBody.code, "already_checked_in");
+    assert.equal(duplicateBody.checkedInAt, done.checkedInAt);
+    assert.equal((await pool.query("SELECT consumed_at FROM api_check_in_nonces WHERE token_digest = $1", [createHash("sha256").update(again.token).digest("hex")])).rows[0].consumed_at, null);
+
+    // Expiry is judged by the server. A code the database says has expired is refused, and so is a signed one whose expiry has passed.
+    const stale = await issue(jordan.cookie);
+    await pool.query("UPDATE api_check_in_nonces SET expires_at = now() - interval '1 second' WHERE token_digest = $1", [createHash("sha256").update(stale.token).digest("hex")]);
+    const expired = await submit(owner.cookie, stale.token);
+    assert.equal(expired.status, 410);
+    assert.equal(failure.parse(await expired.json()).code, "expired");
+    const past = signCheckInToken(checkInSecret, { nonce: randomUUID(), eventId: event.id, userId: jordan.user.userId, expiresAt: Math.floor(Date.now() / 1000) - 5 });
+    assert.equal((await submit(owner.cookie, past)).status, 410);
+    // A correctly signed code that the server never issued is refused too.
+    const unissued = signCheckInToken(checkInSecret, { nonce: randomUUID(), eventId: event.id, userId: jordan.user.userId, expiresAt: Math.floor(Date.now() / 1000) + 60 });
+    assert.equal((await submit(owner.cookie, unissued)).status, 410);
+
+    // Asking again replaces the earlier code, so only the newest one works.
+    const older = await issue(jordan.cookie);
+    const newer = await issue(jordan.cookie);
+    assert.equal((await submit(owner.cookie, older.token)).status, 410);
+    assert.equal((await submit(editor.cookie, newer.token)).status, 201);
+    assert.equal((await pool.query("SELECT count(*) FROM api_attendance WHERE event_id=$1", [event.id])).rows[0].count, "2");
+
+    // Deleting the event removes its codes and attendance.
+    assert.equal((await request(`/events/${event.id}`, owner.cookie, "DELETE")).status, 204);
+    assert.equal((await pool.query("SELECT count(*) FROM api_attendance WHERE event_id=$1", [event.id])).rows[0].count, "0");
+    assert.equal((await pool.query("SELECT count(*) FROM api_check_in_nonces WHERE event_id=$1", [event.id])).rows[0].count, "0");
+  });
+
+  it("lets officers who do not lead an organization approve or reject it, and records each decision", async () => {
+    const lead = await register("verify-lead@howard.edu");
+    const reviewer = await register("verify-reviewer@howard.edu");
+    const student = await register("verify-student@bison.howard.edu");
+    await pool.query("UPDATE api_users SET role='org_officer' WHERE id = ANY($1)", [[lead.user.userId, reviewer.user.userId]]);
+    const created = orgSchema.parse(await (await request("/organizations", lead.cookie, "POST", { name: "Verify Me Club", handle: "verify_me" })).json());
+    const queueItem = z.object({ id: z.string(), status: z.string(), canDecide: z.boolean(), decidedBy: z.string().nullable(), submittedBy: z.string(), orgName: z.string() });
+    const decide = (cookie: string, body: unknown) => request(`/organizations/${created.id}/verification`, cookie, "PUT", body);
+    const verifiedFlag = async () => z.object({ verified: z.boolean() }).parse((await (await request(`/organizations/${created.id}`, lead.cookie)).json()) as object).verified;
+    const readQueue = async (cookie: string) => z.array(queueItem).parse(await (await request("/organization-verifications", cookie)).json());
+
+    // Students cannot read the queue or decide, and signed-out callers are turned away.
+    assert.equal((await request("/organization-verifications", student.cookie)).status, 403);
+    assert.equal((await decide(student.cookie, { decision: "approved" })).status, 403);
+    assert.equal((await request("/organization-verifications")).status, 401);
+    assert.equal(await verifiedFlag(), false);
+
+    // The organization starts pending. Its own leader sees it but cannot decide, and an officer from elsewhere can.
+    assert.deepEqual((await readQueue(lead.cookie)).filter(item => item.id === created.id).map(item => [item.status, item.canDecide]), [["pending", false]]);
+    assert.deepEqual((await readQueue(reviewer.cookie)).filter(item => item.id === created.id).map(item => [item.status, item.canDecide]), [["pending", true]]);
+    assert.equal((await decide(lead.cookie, { decision: "approved" })).status, 403);
+    assert.equal((await decide(reviewer.cookie, { decision: "maybe" })).status, 400);
+    assert.equal((await decide(reviewer.cookie, {})).status, 400);
+    assert.equal((await request(`/organizations/${randomUUID()}/verification`, reviewer.cookie, "PUT", { decision: "approved" })).status, 404);
+    assert.equal(await verifiedFlag(), false);
+
+    const approved = queueItem.parse(await (await decide(reviewer.cookie, { decision: "approved", note: "Charter on file." })).json());
+    assert.deepEqual([approved.status, approved.decidedBy], ["approved", "Test Student"]);
+    assert.equal(await verifiedFlag(), true);
+    assert.equal((await decide(reviewer.cookie, { decision: "approved" })).status, 409);
+
+    // A decision can be reversed, and verified follows the latest one.
+    assert.equal((await decide(reviewer.cookie, { decision: "rejected", note: "Letter expired." })).status, 200);
+    assert.equal(await verifiedFlag(), false);
+
+    // Every change is in the log with who made it, what it replaced, and when.
+    const log = z.array(z.object({ decision: z.string(), previousStatus: z.string(), actorEmail: z.string(), note: z.string().nullable(), decidedAt: z.string() }))
+      .parse(await (await request(`/organizations/${created.id}/verification-decisions`, reviewer.cookie)).json());
+    assert.deepEqual(log.map(entry => [entry.previousStatus, entry.decision, entry.actorEmail, entry.note]), [
+      ["pending", "approved", "verify-reviewer@howard.edu", "Charter on file."],
+      ["approved", "rejected", "verify-reviewer@howard.edu", "Letter expired."],
+    ]);
+    assert.ok(log.every(entry => !Number.isNaN(Date.parse(entry.decidedAt))));
+    assert.equal((await request(`/organizations/${created.id}/verification-decisions`, student.cookie)).status, 403);
+
+    // A leader of one organization can review another, and the history outlives a deleted organization.
+    const second = orgSchema.parse(await (await request("/organizations", reviewer.cookie, "POST", { name: "Second Club", handle: "second_club" })).json());
+    assert.equal((await request(`/organizations/${second.id}/verification`, lead.cookie, "PUT", { decision: "approved" })).status, 200);
+    assert.equal((await request(`/organizations/${second.id}/verification`, reviewer.cookie, "PUT", { decision: "approved" })).status, 403);
+    assert.equal((await request(`/organizations/${second.id}`, reviewer.cookie, "DELETE")).status, 204);
+    const kept = (await pool.query("SELECT organization_name, organization_id FROM api_org_verification_decisions WHERE organization_name = 'Second Club'")).rows;
+    assert.deepEqual(kept, [{ organization_name: "Second Club", organization_id: null }]);
   });
 });

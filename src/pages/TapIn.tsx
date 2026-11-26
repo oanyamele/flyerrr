@@ -3,25 +3,38 @@ import { CalendarX, CheckCircle2, QrCode, ScanLine, Smartphone, Wifi } from "luc
 import { motion } from "framer-motion";
 import BottomNav from "@/components/BottomNav";
 import { useAuth } from "@/contexts/AuthContext";
-import { listEventRecords, recordCheckIn } from "@/data/appDatabase";
+import { listEventRecords, recordCheckIn, type EventRecord } from "@/data/appDatabase";
+import { fetchEvents } from "@/data/repository";
 import { issueDynamicCheckInToken, secondsRemaining, validateCheckInToken } from "@/data/checkInStore";
+import { fetchEventAttendance, redeemCheckInCode, requestCheckInCode, type ServerAttendanceRecord } from "@/services/checkInApi";
+import { ApiError, useHttpBackend } from "@/services/httpApi";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import CheckInQr from "@/components/CheckInQr";
 import { EmptyState } from "@/components/states/DataStates";
 
+// How often the student's code is replaced. The server only honours the newest code, so an old screenshot stops working.
+const QR_REFRESH_MS = 20_000;
+
 const TapIn = () => {
   const { auth } = useAuth();
   const { toast } = useToast();
-  const events = listEventRecords();
-  const [selectedEventId, setSelectedEventId] = useState(events[0]?.id ?? "");
+  // Offline mode reads the browser's own data. Server mode reads the shared events from the API.
+  const [serverEvents, setServerEvents] = useState<EventRecord[]>([]);
+  const [eventsError, setEventsError] = useState(false);
+  const events = useHttpBackend ? serverEvents : listEventRecords();
+  const [pickedEventId, setSelectedEventId] = useState(events[0]?.id ?? "");
+  const selectedEventId = pickedEventId || events[0]?.id || "";
   const [scannedToken, setScannedToken] = useState("");
   const [confirmation, setConfirmation] = useState<{ ok: boolean; message: string } | null>(null);
   const [qrOpen, setQrOpen] = useState(false);
   const [token, setToken] = useState("");
   const [expiresAt, setExpiresAt] = useState(0);
   const [tick, setTick] = useState(0);
+  const [codeError, setCodeError] = useState("");
+  const [attendance, setAttendance] = useState<ServerAttendanceRecord[]>([]);
+  const [attendanceVersion, setAttendanceVersion] = useState(0);
 
   const selectedEvent = useMemo(
     () => events.find((event) => event.id === selectedEventId),
@@ -43,7 +56,31 @@ const TapIn = () => {
     toast({ title: "Check-in confirmed", description: message });
   };
 
-  const handleScannerSubmit = () => {
+  // Server mode: the server decides whether a code is genuine, unexpired and unused.
+  // Offline mode keeps the original browser-only check below.
+  const handleScannerSubmit = async () => {
+    if (useHttpBackend) {
+      if (!selectedEvent) return;
+      try {
+        const result = await redeemCheckInCode(selectedEvent.id, scannedToken);
+        if (!result.ok) {
+          setConfirmation({ ok: false, message: result.message });
+          toast({ title: "Scan rejected", description: result.message, variant: "destructive" });
+          return;
+        }
+        setScannedToken("");
+        const when = new Date(result.checkedInAt).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
+        const message = `${result.attendee.name} checked in for ${selectedEvent.title} at ${when}.`;
+        setConfirmation({ ok: true, message });
+        toast({ title: "Check-in confirmed", description: message });
+        setAttendanceVersion((current) => current + 1);
+      } catch (error) {
+        const message = error instanceof ApiError && error.status !== 500 ? error.message : "Couldn't reach the server. Try again.";
+        setConfirmation({ ok: false, message });
+        toast({ title: "Scan failed", description: message, variant: "destructive" });
+      }
+      return;
+    }
     const result = validateCheckInToken(scannedToken.trim());
     if (!result.ok) {
       toast({ title: "Scan rejected", description: result.reason, variant: "destructive" });
@@ -54,29 +91,67 @@ const TapIn = () => {
   };
 
   const handleNfcTap = () => {
+    if (useHttpBackend) {
+      toast({ title: "Use your QR code", description: "Check-in is done by showing your QR code to an organizer.", variant: "destructive" });
+      return;
+    }
     if (!auth.userId || !selectedEvent) return;
     confirmSavedCheckIn(selectedEvent.id, auth.userId);
   };
 
   useEffect(() => {
-    const userId = auth.userId;
-    if (!qrOpen || !userId || !selectedEvent) return;
+    if (!useHttpBackend) return;
+    let active = true;
+    fetchEvents()
+      .then((loaded) => { if (active) setServerEvents(loaded); })
+      .catch(() => { if (active) setEventsError(true); });
+    return () => { active = false; };
+  }, []);
 
-    const refreshToken = () => {
-      const issued = issueDynamicCheckInToken(selectedEvent.id, userId);
-      setToken(issued.token);
-      setExpiresAt(issued.expiresAt);
+  // The officer's list of who has checked in, read from the server.
+  const attendanceEventId = selectedEvent?.id;
+  useEffect(() => {
+    if (!useHttpBackend || auth.role !== "org_officer" || !attendanceEventId) return;
+    let active = true;
+    fetchEventAttendance(attendanceEventId)
+      .then((rows) => { if (active) setAttendance(rows); })
+      .catch(() => { if (active) setAttendance([]); });
+    return () => { active = false; };
+  }, [auth.role, attendanceEventId, attendanceVersion]);
+
+  // Depend on the event id (a string), not the event object: the events list is
+  // re-read on every render, so the object is new each time and would restart
+  // this effect, and the token refresh, in an endless loop.
+  const selectedEventKey = selectedEvent?.id;
+  useEffect(() => {
+    const userId = auth.userId;
+    if (!qrOpen || !userId || !selectedEventKey) return;
+    let active = true;
+
+    const refreshToken = async () => {
+      try {
+        const issued = useHttpBackend
+          ? await requestCheckInCode(selectedEventKey)
+          : issueDynamicCheckInToken(selectedEventKey, userId);
+        if (!active) return;
+        setToken(issued.token);
+        setExpiresAt(Math.min(issued.expiresAt, Date.now() + QR_REFRESH_MS));
+        setCodeError("");
+      } catch (error) {
+        if (active) setCodeError(error instanceof ApiError ? error.message : "Couldn't get a check-in code. Check your connection.");
+      }
     };
 
-    refreshToken();
-    const refreshInterval = window.setInterval(refreshToken, 20_000);
+    void refreshToken();
+    const refreshInterval = window.setInterval(() => void refreshToken(), QR_REFRESH_MS);
     const secondTick = window.setInterval(() => setTick((current) => current + 1), 1_000);
 
     return () => {
+      active = false;
       window.clearInterval(refreshInterval);
       window.clearInterval(secondTick);
     };
-  }, [qrOpen, auth.userId, selectedEvent]);
+  }, [qrOpen, auth.userId, selectedEventKey]);
 
   return (
     <div className="min-h-screen bg-background flex flex-col pb-24">
@@ -195,7 +270,28 @@ const TapIn = () => {
                 </p>
               )}
             </div>
+            {useHttpBackend && (
+              <div className="rounded-[12px] border border-border bg-card p-4">
+                <p className="mb-2 text-sm font-semibold text-foreground">Checked in ({attendance.length})</p>
+                {attendance.length === 0 ? (
+                  <p className="text-xs text-muted-foreground">No one has checked in yet.</p>
+                ) : (
+                  <ul aria-label="Checked-in attendees" className="space-y-1 text-xs">
+                    {attendance.map((row) => (
+                      <li key={row.userId} className="flex justify-between gap-2">
+                        <span className="text-foreground">{row.name}</span>
+                        <span className="text-muted-foreground">{new Date(row.checkedInAt).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })}</span>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </div>
+            )}
           </div>
+        )}
+
+        {eventsError && (
+          <p role="alert" className="mt-6 text-sm text-destructive">Couldn't load events. Check your connection and reload.</p>
         )}
 
         {confirmation && (
@@ -220,6 +316,7 @@ const TapIn = () => {
             </DialogDescription>
           </DialogHeader>
           <CheckInQr token={token} eventTitle={selectedEvent?.title} countdown={countdown} />
+          {codeError && <p role="alert" className="text-xs text-destructive">{codeError}</p>}
         </DialogContent>
       </Dialog>
 
