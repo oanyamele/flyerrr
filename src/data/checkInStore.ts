@@ -1,4 +1,5 @@
 import type { EventRecord } from "@/data/appDatabase";
+export { secondsRemaining } from "@/lib/secondsRemaining";
 
 interface RsvpEntry {
   eventId: string;
@@ -122,5 +123,3 @@ export const validateCheckInToken = (token: string) => {
   safeWrite(TOKEN_KEY, next);
   return { ok: true as const, eventId: payload.eventId, userId: payload.userId };
 };
-
-export const secondsRemaining = (expiresAt: number) => Math.max(0, Math.ceil((expiresAt - Date.now()) / 1000));

@@ -29,7 +29,8 @@ bun run dev
 ```
 
 Open `http://localhost:8080`. Vite proxies `/api` to the API on port 3001.
-The API applies its additive migration on startup. PostgreSQL uses the
+The API applies any pending migrations on startup (see
+[Database migrations](#database-migrations)). PostgreSQL uses the
 `flyerrr_data` Docker volume, so stopping/restarting the API or database preserves
 bookmarks. `docker compose down` keeps the volume; removing that volume deletes
 the local shared data.
@@ -40,6 +41,37 @@ If `VITE_DATA_BACKEND` is omitted, the application uses the existing offline
 adapter. Offline bookmarks use `flyerrr_bookmarks_v1`, keyed by user ID, and are
 never presented as shared server data. Legacy component-only saves have no
 durable state to migrate. Demo accounts and passwords are not copied to the API.
+
+## Deploying
+
+Staging runs the API and the built web app as one container, with a Supabase project as the
+database. See [deploy-staging.md](./deploy-staging.md). `DATABASE_SSL_CA` is the one extra
+environment variable it adds, for databases that use their own certificate authority.
+
+## Database migrations
+
+Schema changes live in `server/migrations/` as numbered SQL files
+(`001_bookmarks.sql`, `002_event_editors.sql`, `003_organizations.sql`, `004_lock_down_tables.sql`, `005_check_in.sql`, and so on). The runner in `server/database.ts`
+applies them in name order and records each one in a `schema_migrations` table with
+a SHA-256 checksum. Running it again does nothing.
+
+```sh
+DATABASE_URL=postgres://flyerrr:flyerrr_dev@127.0.0.1:55432/flyerrr bun run api:migrate
+```
+
+The API also runs pending migrations when it starts. Concurrent starts are
+serialized with a PostgreSQL advisory lock, so two instances booting together are safe.
+
+Rules for migration files:
+
+- Never edit a migration that has been applied anywhere. The runner stops with an
+  error if an applied file's checksum changed. Add a new numbered file instead.
+- Each file manages its own transaction (`BEGIN` ... `COMMIT`) and should be safe to
+  re-run, using `IF NOT EXISTS` and similar guards.
+- Name files `NNN_lowercase_description.sql`. Other names are ignored.
+
+CI applies the migrations to a fresh PostgreSQL service twice before the API tests,
+and `server/migrate.test.ts` covers recording, repeat runs, and the checksum guard.
 
 ## Accounts and event publishing
 
@@ -68,6 +100,15 @@ officer-created local-only events are not silently uploaded.
 
 ## API contract
 
+The full contract, with every route, request body, response and error, is in
+[`docs/openapi.json`](./openapi.json) (OpenAPI 3.1). Open it in any OpenAPI viewer, for
+example by pasting it into the Swagger Editor. `server/openapi.test.ts` runs with
+`bun run test:api` and in CI. It fails when a route in `server/app.ts` is missing from the
+contract, or is documented but no longer served, so a route change and its contract change
+go in the same pull request. The test checks routes, operation ids, path parameters and
+schema references. It does not check request and response bodies against the schemas, so
+update those by hand when a body changes. The table below is a summary.
+
 All routes are same-site; writes require an `Origin` matching `APP_ORIGIN`.
 For production, set `NODE_ENV=production`, an HTTPS `APP_ORIGIN`, and a protected
 `DATABASE_URL`. Secure cookies are enabled in production. Serve `/api` through
@@ -84,10 +125,74 @@ environment variables through the host. `PORT` defaults to 3001.
 | POST | `/api/auth/logout` | Revokes the session and clears its cookie |
 | GET | `/api/events` | Lists shared events with the caller's saved state |
 | GET | `/api/events/:id` | Reads an event; unknown UUID returns 404 |
-| POST | `/api/events` | Officer-only publish, using shared event validation |
+| POST | `/api/events` | Officer-only publish, using shared event validation. Optional `organizationId` (see below) |
+| PUT | `/api/events/:id` | Replaces an event's editable fields; owner or invited editor only |
+| DELETE | `/api/events/:id` | Deletes an event with its saves and editors; owner only |
+| GET | `/api/events/:id/editors` | Lists invited editors; creator or invited editor only |
+| POST | `/api/events/:id/editors` | Invites a registered account (officer or student) by email; owner only |
+| DELETE | `/api/events/:id/editors/:userId` | Removes an editor; owner, or the editor removing themself |
+| GET | `/api/organizations` | Lists the organizations the caller belongs to, with their `myRole` |
+| POST | `/api/organizations` | Officer-only. Creates an organization (`name`, `handle`); the creator becomes its leader. Taken handle returns 409 |
+| GET | `/api/organizations/:id` | Reads an organization's public profile and the caller's `myRole` (null for non-members) |
+| PUT | `/api/organizations/:id` | Changes an organization's name, handle, or both; leader only. Taken handle returns 409 |
+| DELETE | `/api/organizations/:id` | Deletes an organization and its memberships; leader only. Returns 409 while it still has events |
+| GET | `/api/organizations/:id/members` | Lists members; members only |
+| POST | `/api/organizations/:id/members` | Adds a registered account by email as `member` or `leader`, or changes an existing member's role; leader only |
+| DELETE | `/api/organizations/:id/members/:userId` | Removes a member; a leader, or the member removing themself |
+| POST | `/api/events/:id/check-in-tokens` | Any signed-in account gets a signed, single-use check-in code for themself; it expires after 2 minutes |
+| POST | `/api/events/:id/check-ins` | Redeems a code and records attendance; event owner, invited editor or organization leader only |
+| GET | `/api/events/:id/attendance` | Lists who checked in; same people as above |
+| GET | `/api/organization-verifications` | The verification queue: every organization with its status, pending first; officers only |
+| PUT | `/api/organizations/:id/verification` | Approves or rejects an organization; any officer except a leader of that organization. Approval sets `verified: true` on its profile |
+| GET | `/api/organizations/:id/verification-decisions` | The audit log for one organization (who decided, what it replaced, when); officers only |
 | GET | `/api/bookmarks` | Lists only the caller's saved events |
 | PUT | `/api/bookmarks/:id` | Idempotently saves an existing event |
 | DELETE | `/api/bookmarks/:id` | Idempotently removes the caller's save |
+
+**Organizations.** Every event belongs to an organization, and its `org` field in API
+responses comes from that organization. An account can belong to several organizations,
+as a `member` or a `leader`. Any registered account can be added, officer or student, and
+an organization always keeps at least one leader. Only a leader of an organization can
+publish events for it, and publishing still needs the officer role. Handles are letters,
+numbers and underscores (3 to 30), unique ignoring case, and responses show them with a
+leading `@`.
+
+When publishing, `organizationId` is optional. If it is sent, the caller must lead that
+organization (otherwise 403). If it is left out, the event goes to the one organization the
+caller leads. An officer who leads none gets a default one called "<name> Org", created on
+their first event. An officer who leads several must send `organizationId` (otherwise 400).
+The web forms do not have an organization picker yet, so until they do, they publish to the
+default organization. Verification and follower counts are not stored yet and are always
+`false` and `0`.
+
+**Check-in codes.** A signed-in student asks the server for a code and shows it as a QR code.
+An officer scans it on a different device and sends it to the server, which marks the code used
+and records the attendance in one database transaction. The code is the payload plus an
+HMAC-SHA256 signature made with `CHECK_IN_SECRET`, a secret that only the server holds, so
+changing the event, the person or the expiry makes it invalid. The database stores only a
+digest of each code. A code expires 2 minutes after the server issues it and works once, and
+both rules use the database clock, never a device clock. A student can ask again at any time,
+which replaces their unused code for that event. A person can be checked in to an event only once.
+Only the event's owner, invited editors and leaders of its organization can redeem codes or see
+attendance. Failures return a `code`: `invalid`, `wrong_event`, `expired` (410), `already_used`
+or `already_checked_in` (both 409). `CHECK_IN_SECRET` is at least 32 characters (generate one with
+`openssl rand -hex 32`) and is required when `NODE_ENV=production`. Every instance must share it.
+Without it outside production, each process makes its own, so codes only work on the instance that
+issued them. Changing it invalidates codes that are in flight, which expire within 2 minutes anyway.
+
+**Event permissions.** The officer who publishes an event owns it, and so does every
+leader of the event's organization. The owner can
+edit it, delete it, and invite other people to edit it. Permissions are per event,
+not by account role: an invited editor can be any registered account, officer or
+student. An editor can edit the event and see its editors, but cannot delete it,
+invite anyone, or remove other editors (they can remove themself). Everyone else
+gets 403. Only officers can publish new events.
+Editing uses the same validation as publishing, so an event must still be in the
+future to be saved. Edits never change the creator, organization, counters or creation
+time. Inviting gives an existing account access immediately and sends no email. The
+person must have signed up first: an email with no account returns 404, because
+access goes to an account, not to an unverified address. This also means an event's
+owner can learn whether a given address has an account.
 
 Bookmarks have a composite primary key `(user_id, event_id)` and foreign keys
 with cascading deletion. Client-supplied user IDs and roles never select an
@@ -128,7 +233,17 @@ fields are temporarily stored in a JSONB payload with relational IDs, creator,
 start timestamp, and saves. The migration is additive and repeatable. A later
 full-schema migration must transform those payloads explicitly.
 
-Attendance, RSVP, check-in, reports, organization verification and other prototype
+Migration `003_organizations.sql` gives every existing event's creator one organization
+(named "<name> Org") that they lead, and attaches their events to it. Those organizations
+have new ids, so follows that a browser saved under the old made-up ids do not carry over.
+
+Organizations start `pending`. Migration `006_org_verification.sql` adds the status and an
+audit table (`api_org_verification_decisions`) that keeps the organization name and officer
+email as they were, and survives deleting either. Decisions can be reversed; the latest one
+decides `verified`. The queue shows who created the organization and their email; it no
+longer shows a proof type, because the server does not collect one yet.
+
+RSVP, reports, points and other prototype
 features still use the existing data stores. This work does not complete #14's
 staging deployment or #16's app-wide auth migration. No hosted environment was
 created or verified. Password recovery, university-email verification, broader
