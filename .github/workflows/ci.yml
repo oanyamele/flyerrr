@@ -71,7 +71,7 @@ jobs:
         env:
           TEST_DATABASE_URL: postgres://flyerrr:flyerrr_test@127.0.0.1:5432/flyerrr_test
 
-      - name: Bookmark browser tests
+      - name: Browser tests (bookmarks and core loop)
         run: bun run test:bookmarks:browser
         env:
           TEST_DATABASE_URL: postgres://flyerrr:flyerrr_test@127.0.0.1:5432/flyerrr_test
