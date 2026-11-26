@@ -1,11 +1,11 @@
-import { Home, Search, Smartphone, User, Bookmark, Plus } from "lucide-react";
+import { Home, Search, QrCode, User, Bookmark, Plus } from "lucide-react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 
 const baseTabs = [
   { icon: Home, label: "Feed", path: "/" },
   { icon: Search, label: "Explore", path: "/explore" },
-  { icon: Smartphone, label: "Tap In", path: "/tap-in" },
+  { icon: QrCode, label: "Check In", path: "/tap-in" },
   { icon: Bookmark, label: "Saved", path: "/saved" },
   { icon: User, label: "Profile", path: "/profile" },
 ];
@@ -20,7 +20,7 @@ const BottomNav = () => {
         { icon: Home, label: "Feed", path: "/" },
         { icon: Search, label: "Explore", path: "/explore" },
         { icon: Plus, label: "Create", path: "/create-event" },
-        { icon: Smartphone, label: "Tap In", path: "/tap-in" },
+        { icon: QrCode, label: "Check In", path: "/tap-in" },
         { icon: User, label: "Profile", path: "/profile" },
       ]
     : baseTabs;
@@ -30,7 +30,7 @@ const BottomNav = () => {
       <div className="flex items-center justify-around max-w-lg mx-auto py-2 pb-[max(0.5rem,env(safe-area-inset-bottom))]">
         {tabs.map((tab) => {
           const active = location.pathname === tab.path;
-          const isCenter = (tab.label === "Tap In" && auth.role === "student") || (tab.label === "Create" && auth.role === "org_officer");
+          const isCenter = (tab.label === "Check In" && auth.role === "student") || (tab.label === "Create" && auth.role === "org_officer");
           return (
             <button
               key={tab.label}

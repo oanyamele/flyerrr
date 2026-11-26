@@ -34,7 +34,7 @@ test("a student on one device is checked in by an officer on another, once", asy
   // The student's device asks the server for a code.
   await student.goto("/tap-in");
   await student.getByLabel("Select event for check-in").selectOption({ label: "Cross-Device Check-In" });
-  await student.getByRole("button", { name: "Open backup QR check-in" }).click();
+  await student.getByRole("button", { name: "Show My Check-In QR" }).click();
   const shown = student.getByTestId("check-in-code");
   await expect(shown).not.toHaveText("Generating code…");
   const code = (await shown.innerText()).trim();

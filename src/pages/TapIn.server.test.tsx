@@ -101,7 +101,7 @@ describe("check-in through the server", () => {
     });
     renderTapIn();
     await screen.findByRole("option", { name: "Hack Night" });
-    fireEvent.click(screen.getByRole("button", { name: "Open backup QR check-in" }));
+    fireEvent.click(screen.getByRole("button", { name: "Show My Check-In QR" }));
     expect(await screen.findByTestId("check-in-code")).toHaveTextContent("signed.payload");
     expect(request).toHaveBeenCalledWith("/events/e1/check-in-tokens", { method: "POST" });
   });
@@ -114,7 +114,7 @@ describe("check-in through the server", () => {
     });
     renderTapIn();
     await screen.findByRole("option", { name: "Hack Night" });
-    fireEvent.click(screen.getByRole("button", { name: "Open backup QR check-in" }));
+    fireEvent.click(screen.getByRole("button", { name: "Show My Check-In QR" }));
     expect(await screen.findByText("Event not found.")).toBeInTheDocument();
     await waitFor(() => expect(screen.getByTestId("check-in-code")).toHaveTextContent("Generating code…"));
   });
