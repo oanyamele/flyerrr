@@ -1,4 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { STORAGE_KEYS } from "@/lib/storage";
 import type { EventRecord } from "@/data/appDatabase";
 import {
   getReminderEvents,
@@ -53,7 +54,7 @@ describe("check-in tokens", () => {
     const latestPayload = { eventId: "1", userId: "user-student-1", expiresAt: Date.now() + 15_000, nonce: "new" };
     const olderToken = btoa(JSON.stringify(olderPayload));
     const latestToken = btoa(JSON.stringify(latestPayload));
-    localStorage.setItem("flyer_checkin_tokens_v1", JSON.stringify([
+    localStorage.setItem(STORAGE_KEYS.checkInTokens, JSON.stringify([
       { token: olderToken, ...olderPayload, used: false },
       { token: latestToken, ...latestPayload, used: false },
     ]));
@@ -78,7 +79,7 @@ describe("check-in tokens", () => {
   });
 
   it("still issues a token when the stored token list is unreadable", () => {
-    localStorage.setItem("flyer_checkin_tokens_v1", "{broken");
+    localStorage.setItem(STORAGE_KEYS.checkInTokens, "{broken");
     const issued = issueDynamicCheckInToken("2", "user-student-1");
     expect(validateCheckInToken(issued.token).ok).toBe(true);
   });
@@ -103,8 +104,8 @@ describe("rsvps and reminders", () => {
   });
 
   it("treats unreadable RSVP storage as an empty list", () => {
-    localStorage.setItem("flyer_rsvp_v1", "{broken");
-    localStorage.setItem("flyer_reminders_v1", "{broken");
+    localStorage.setItem(STORAGE_KEYS.rsvps, "{broken");
+    localStorage.setItem(STORAGE_KEYS.reminders, "{broken");
     expect(isRsvped("1", "user-student-1")).toBe(false);
     setReminderEnabled("1", "user-student-1", true);
     expect(getReminderEvents(events, "user-student-1")).toEqual([]);

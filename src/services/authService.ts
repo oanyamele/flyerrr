@@ -1,4 +1,5 @@
 import { type AppUser, type UserRole } from "@/data/appDatabase";
+import { STORAGE_KEYS, readJson, removeItem, writeJson } from "@/lib/storage";
 
 export type { UserRole };
 
@@ -11,7 +12,7 @@ export interface AuthSession {
 }
 
 /** Existing production key — changing it would log everyone out. */
-export const AUTH_STORAGE_KEY = "flyerrr_auth";
+export const AUTH_STORAGE_KEY = STORAGE_KEYS.auth;
 
 export const loggedOutSession = (): AuthSession => ({
   isLoggedIn: false,
@@ -32,24 +33,15 @@ export const isAuthSession = (value: unknown): value is AuthSession => {
   );
 };
 
-export const loadSession = (): AuthSession => {
-  const raw = localStorage.getItem(AUTH_STORAGE_KEY);
-  if (!raw) return loggedOutSession();
-
-  try {
-    const parsed: unknown = JSON.parse(raw);
-    return isAuthSession(parsed) ? parsed : loggedOutSession();
-  } catch {
-    return loggedOutSession();
-  }
-};
+export const loadSession = (): AuthSession =>
+  readJson(AUTH_STORAGE_KEY, loggedOutSession(), isAuthSession);
 
 export const saveSession = (session: AuthSession) => {
-  localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(session));
+  writeJson(AUTH_STORAGE_KEY, session);
 };
 
 export const clearSession = () => {
-  localStorage.removeItem(AUTH_STORAGE_KEY);
+  removeItem(AUTH_STORAGE_KEY);
 };
 
 export const sessionFromUser = (user: AppUser): AuthSession => ({

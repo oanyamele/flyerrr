@@ -5,6 +5,7 @@ import { HttpRepository } from "@/repositories/httpRepository";
 import type { EventRecord } from "@/data/appDatabase";
 import { LocalStorageRepository } from "@/repositories/localStorageRepository";
 import { openHttpRepositories } from "@/repositories/openRepositories";
+import { STORAGE_KEYS } from "@/lib/storage";
 
 const jsonResponse = (body: unknown, status = 200) =>
   new Response(JSON.stringify(body), {
@@ -98,7 +99,7 @@ describe("LocalStorageRepository", () => {
     const eventId = events.listEvents()[0]?.id ?? "";
     expect(await attendance.toggleRsvp(eventId, "user-student-1")).toBe(true);
     expect(attendance.isRsvped(eventId, "user-student-1")).toBe(true);
-    expect(localStorage.getItem("flyer_rsvp_v1")).toContain(eventId);
+    expect(localStorage.getItem(STORAGE_KEYS.rsvps)).toContain(eventId);
     expect(attendance.reminderMapForUser("user-student-1")[eventId]).toBe(true);
 
     expect(attendance.listAttendance().length).toBeGreaterThan(0);
@@ -156,7 +157,7 @@ describe("HttpRepository", () => {
       role: "student",
     });
     expect(signedIn.ok).toBe(true);
-    expect(localStorage.getItem("flyer_db_v1")).toContain("student@howard.edu");
+    expect(localStorage.getItem(STORAGE_KEYS.database)).toContain("student@howard.edu");
   });
 
   it("sends writes to the API and updates the cache", async () => {

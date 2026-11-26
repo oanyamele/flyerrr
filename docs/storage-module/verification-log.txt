@@ -1,0 +1,48 @@
+Storage module verification - branch nc/storage-module, based on main @ cf6a1ec
+Old = untouched copy of main. New = this branch. Same browser steps on both.
+Tests ran on Node 25 with NODE_OPTIONS=--no-experimental-webstorage (see note below).
+
+1. AUTOMATED CHECKS
+                                     Old (main)              New
+   vitest run                        7/7 pass                15/15 pass (8 new storage tests)
+   eslint .                          16 problems (5 errors)  16 problems (5 errors), none new
+   tsc -p tsconfig.app.json --noEmit not run                 0 errors
+   vite build                        not run                 success; only the >500 kB chunk warning (risk R-16)
+
+2. LINT GUARD
+   Direct localStorage in src/pages/GuardCheck.ts -> no-restricted-globals error
+   window.localStorage in the same file           -> no-restricted-properties error
+   Direct localStorage calls left outside the module: 3, all in src/data/appDatabase.ts (exempt)
+
+3. DATA SAVED BY THE OLD CODE, LOADED BY THE NEW CODE
+   Using the old code: logged in as the seed student, followed an org, RSVP'd to event 1,
+   opened the QR dialog, switched to dark mode. All 7 keys were written and snapshotted.
+   Switched to the new code and reloaded:
+     Key names unchanged: yes        Values changed by loading: none
+     Still logged in: yes            Still following: yes
+     Still RSVP'd: yes               Dark mode applied: yes
+
+4. WRITES THROUGH THE NEW CODE
+     Unfollow -> flyerrr_follows []             Follow  -> ["4"]
+     Cancel RSVP -> flyer_rsvp_v1 []            RSVP    -> event 1 saved
+     Theme -> "light", then "dark" (plain text, no JSON quotes), page class follows
+     Sign Out -> redirected to /login; flyerrr_auth removed; flyerrr_follows kept
+
+5. CORRUPTED DATA (flyerrr_follows = {not-json, flyerrr_theme = blue, then reload)
+     Old: blank page, 0 elements in #root.
+          Uncaught SyntaxError from JSON.parse in FollowProvider.
+     New: app loads normally, 4 elements in #root; theme falls back to light.
+
+6. QR TOKEN, DISPLAYED VS SAVED (8 samples over 2 s)
+     Old:               0/8 matched, 8 different tokens
+     New:               0/8 matched, 8 different tokens  -> same behaviour, not a regression
+     New + VIBE fix:    8/8 matched, 1 token, countdown running (8 samples over 3.2 s)
+   The mismatch comes from the effect bug fixed separately on nc/vibe-eventdetail.
+
+7. SAVE FAILURE, TESTED WITH THE VIBE FIX (setItem forced to throw, QR dialog reopened)
+     Dialog shows: "Couldn't generate a check-in code. Close this and try again."
+     This confirms writeJson still throws, which the error message depends on.
+
+Note: on Node 25, Node's built-in localStorage shadows jsdom's, so tests that use it fail with
+"localStorage.clear is not a function" unless the flag above is set. The project and CI target
+Node 20 (risk R-12). This run did not use Node 20.

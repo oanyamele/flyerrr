@@ -1,4 +1,5 @@
 import type { EventRecord } from "@/data/appDatabase";
+import { STORAGE_KEYS, readJson, writeJson } from "@/lib/storage";
 export { secondsRemaining } from "@/lib/secondsRemaining";
 
 interface RsvpEntry {
@@ -19,28 +20,10 @@ interface ActiveCheckInToken {
   used: boolean;
 }
 
-const RSVP_KEY = "flyer_rsvp_v1";
-const REMINDER_KEY = "flyer_reminders_v1";
-const TOKEN_KEY = "flyer_checkin_tokens_v1";
-
 export const QR_TOKEN_TTL_SECONDS = 20;
 
-const safeRead = <T,>(key: string, fallback: T): T => {
-  const raw = localStorage.getItem(key);
-  if (!raw) return fallback;
-  try {
-    return JSON.parse(raw) as T;
-  } catch {
-    return fallback;
-  }
-};
-
-const safeWrite = (key: string, value: unknown) => {
-  localStorage.setItem(key, JSON.stringify(value));
-};
-
 export const getRsvpsForUser = (userId: string) => {
-  const all = safeRead<RsvpEntry[]>(RSVP_KEY, []);
+  const all = readJson<RsvpEntry[]>(STORAGE_KEYS.rsvps, []);
   return all.filter((entry) => entry.userId === userId);
 };
 
@@ -48,27 +31,27 @@ export const isRsvped = (eventId: string, userId: string) =>
   getRsvpsForUser(userId).some((entry) => entry.eventId === eventId);
 
 export const toggleRsvp = (eventId: string, userId: string) => {
-  const all = safeRead<RsvpEntry[]>(RSVP_KEY, []);
+  const all = readJson<RsvpEntry[]>(STORAGE_KEYS.rsvps, []);
   const exists = all.some((entry) => entry.eventId === eventId && entry.userId === userId);
   const next = exists
     ? all.filter((entry) => !(entry.eventId === eventId && entry.userId === userId))
     : [...all, { eventId, userId, createdAt: new Date().toISOString() }];
 
-  safeWrite(RSVP_KEY, next);
+  writeJson(STORAGE_KEYS.rsvps, next);
   if (!exists) setReminderEnabled(eventId, userId, true);
   return !exists;
 };
 
 export const getReminderMapForUser = (userId: string) => {
-  const all = safeRead<Record<string, ReminderSettings>>(REMINDER_KEY, {});
+  const all = readJson<Record<string, ReminderSettings>>(STORAGE_KEYS.reminders, {});
   return all[userId] ?? {};
 };
 
 export const setReminderEnabled = (eventId: string, userId: string, enabled: boolean) => {
-  const all = safeRead<Record<string, ReminderSettings>>(REMINDER_KEY, {});
+  const all = readJson<Record<string, ReminderSettings>>(STORAGE_KEYS.reminders, {});
   const userSettings = all[userId] ?? {};
   const nextUserSettings = { ...userSettings, [eventId]: enabled };
-  safeWrite(REMINDER_KEY, { ...all, [userId]: nextUserSettings });
+  writeJson(STORAGE_KEYS.reminders, { ...all, [userId]: nextUserSettings });
 };
 
 export const getReminderEvents = (events: EventRecord[], userId: string) => {
@@ -93,10 +76,10 @@ export const issueDynamicCheckInToken = (eventId: string, userId: string) => {
   const payload = { eventId, userId, expiresAt, nonce };
   const token = encodePayload(payload);
 
-  const all = safeRead<ActiveCheckInToken[]>(TOKEN_KEY, []);
+  const all = readJson<ActiveCheckInToken[]>(STORAGE_KEYS.checkInTokens, []);
   const filtered = all.filter((entry) => !(entry.eventId === eventId && entry.userId === userId));
   filtered.push({ token, eventId, userId, expiresAt, used: false });
-  safeWrite(TOKEN_KEY, filtered);
+  writeJson(STORAGE_KEYS.checkInTokens, filtered);
 
   return { token, expiresAt };
 };
@@ -105,7 +88,7 @@ export const validateCheckInToken = (token: string) => {
   const payload = decodePayload<{ eventId: string; userId: string; expiresAt: number; nonce: string }>(token);
   if (!payload) return { ok: false as const, reason: "Invalid QR code." };
 
-  const all = safeRead<ActiveCheckInToken[]>(TOKEN_KEY, []);
+  const all = readJson<ActiveCheckInToken[]>(STORAGE_KEYS.checkInTokens, []);
   const matching = all.find((entry) => entry.token === token);
   if (!matching) return { ok: false as const, reason: "QR code not recognized." };
   if (matching.used) return { ok: false as const, reason: "QR code already used." };
@@ -120,6 +103,6 @@ export const validateCheckInToken = (token: string) => {
   }
 
   const next = all.map((entry) => (entry.token === token ? { ...entry, used: true } : entry));
-  safeWrite(TOKEN_KEY, next);
+  writeJson(STORAGE_KEYS.checkInTokens, next);
   return { ok: true as const, eventId: payload.eventId, userId: payload.userId };
 };

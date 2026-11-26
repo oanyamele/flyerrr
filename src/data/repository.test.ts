@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { STORAGE_KEYS } from "@/lib/storage";
 import * as appDatabase from "@/data/appDatabase";
 import { recordCheckIn } from "@/data/appDatabase";
 import { toggleRsvp } from "@/data/checkInStore";
@@ -46,9 +47,9 @@ describe("local data repository", () => {
   });
 
   it("keeps corrupt storage intact and reports a data error", async () => {
-    localStorage.setItem("flyer_db_v1", "{broken");
+    localStorage.setItem(STORAGE_KEYS.database, "{broken");
     await expect(fetchEvents()).rejects.toBeInstanceOf(DataAccessError);
-    expect(localStorage.getItem("flyer_db_v1")).toBe("{broken");
+    expect(localStorage.getItem(STORAGE_KEYS.database)).toBe("{broken");
   });
 
   it("wraps an unexpected storage failure as a data error", async () => {

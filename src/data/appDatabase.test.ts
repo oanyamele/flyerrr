@@ -1,4 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { STORAGE_KEYS } from "@/lib/storage";
 import {
   authenticateUser,
   createEventRecord,
@@ -89,7 +90,7 @@ describe("accounts and events", () => {
     const changed = db.events.map((event) =>
       event.id === "1" ? { ...event, title: "Changed title" } : event,
     );
-    localStorage.setItem("flyer_db_v1", JSON.stringify({
+    localStorage.setItem(STORAGE_KEYS.database, JSON.stringify({
       ...db,
       events: changed.filter((event) => event.id !== "10"),
     }));
@@ -100,9 +101,9 @@ describe("accounts and events", () => {
   });
 
   it("reseeds when the stored database cannot be parsed", () => {
-    localStorage.setItem("flyer_db_v1", "{broken");
+    localStorage.setItem(STORAGE_KEYS.database, "{broken");
     expect(getDatabase().users.some((user) => user.email === "student@howard.edu")).toBe(true);
-    expect(localStorage.getItem("flyer_db_v1")).toContain("student@howard.edu");
+    expect(localStorage.getItem(STORAGE_KEYS.database)).toContain("student@howard.edu");
   });
 });
 

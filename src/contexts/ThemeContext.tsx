@@ -1,4 +1,5 @@
 import { createContext, useContext, useState, useEffect, ReactNode } from "react";
+import { STORAGE_KEYS, readString, writeString } from "@/lib/storage";
 
 type Theme = "light" | "dark";
 
@@ -10,10 +11,9 @@ interface ThemeContextType {
 const ThemeContext = createContext<ThemeContextType | null>(null);
 
 export const ThemeProvider = ({ children }: { children: ReactNode }) => {
-  const [theme, setTheme] = useState<Theme>(() => {
-    const saved = localStorage.getItem("flyerrr_theme");
-    return (saved as Theme) || "light";
-  });
+  const [theme, setTheme] = useState<Theme>(() =>
+    readString(STORAGE_KEYS.theme) === "dark" ? "dark" : "light",
+  );
 
   useEffect(() => {
     const root = document.documentElement;
@@ -22,7 +22,7 @@ export const ThemeProvider = ({ children }: { children: ReactNode }) => {
     } else {
       root.classList.remove("dark");
     }
-    localStorage.setItem("flyerrr_theme", theme);
+    writeString(STORAGE_KEYS.theme, theme);
   }, [theme]);
 
   const toggleTheme = () => setTheme((t) => (t === "light" ? "dark" : "light"));
